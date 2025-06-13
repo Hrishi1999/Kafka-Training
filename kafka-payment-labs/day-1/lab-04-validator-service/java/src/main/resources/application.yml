@@ -1,0 +1,64 @@
+# Lab 04 - Payment Validator Service Configuration
+
+kafka:
+  # Confluent Cloud connection settings
+  bootstrap-servers: ${BOOTSTRAP_SERVERS:localhost:9092}
+  security-protocol: SASL_SSL
+  sasl-mechanism: PLAIN
+  sasl-username: ${SASL_USERNAME}
+  sasl-password: ${SASL_PASSWORD}
+  
+  # Consumer settings
+  consumer:
+    group-id: payment-validator
+    auto-offset-reset: earliest
+    enable-auto-commit: true
+    auto-commit-interval-ms: 5000
+    max-poll-records: 500
+    session-timeout-ms: 10000
+    heartbeat-interval-ms: 3000
+    concurrency: 1
+
+# Application settings
+app:
+  topics:
+    payment-requests: payment_requests
+  
+  # Validator service settings
+  validator:
+    enable-business-rules: true
+    max-amount-threshold: 10000.0
+    enable-fraud-detection: true
+
+# Lab-specific settings
+lab:
+  name: lab-04-validator-service
+  version: 1.0.0
+
+# Logging configuration
+logging:
+  level:
+    com.acme.kafka: INFO
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Spring Boot settings
+spring:
+  application:
+    name: lab-04-validator-service
+  
+  # JSON serialization settings
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Main class for different scenarios
+scenarios:
+  starter: com.acme.kafka.ConsumerStarter
+  solution: com.acme.kafka.ConsumerSolution
+  validator: com.acme.kafka.PaymentValidatorApplication

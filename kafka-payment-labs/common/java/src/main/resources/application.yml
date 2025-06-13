@@ -1,0 +1,84 @@
+# Common Kafka Configuration Template
+# Copy this file to your lab's src/main/resources/ directory and customize
+
+kafka:
+  # Confluent Cloud connection settings
+  # Replace with your actual values from .env file
+  bootstrap-servers: ${BOOTSTRAP_SERVERS:localhost:9092}
+  security-protocol: SASL_SSL
+  sasl-mechanism: PLAIN
+  sasl-username: ${SASL_USERNAME}
+  sasl-password: ${SASL_PASSWORD}
+  
+  # Producer settings
+  producer:
+    acks: all
+    retries: 3
+    linger-ms: 10
+    batch-size: 16384
+    compression-type: snappy
+    max-in-flight-requests-per-connection: 5
+    enable-idempotence: true
+  
+  # Consumer settings
+  consumer:
+    group-id: ${CONSUMER_GROUP_ID:payment-processor}
+    auto-offset-reset: earliest
+    enable-auto-commit: true
+    auto-commit-interval-ms: 5000
+    max-poll-records: 500
+    max-poll-interval-ms: 300000
+    session-timeout-ms: 10000
+    heartbeat-interval-ms: 3000
+    concurrency: 1
+  
+  # Schema Registry settings (for Avro labs)
+  schema-registry:
+    url: ${SCHEMA_REGISTRY_URL}
+    api-key: ${SCHEMA_REGISTRY_API_KEY}
+    api-secret: ${SCHEMA_REGISTRY_API_SECRET}
+
+# Application settings
+app:
+  topics:
+    payment-requests: payment_requests
+    payment-validations: payment_validations
+    payment-notifications: payment_notifications
+  
+  # Lab-specific settings
+  lab:
+    name: ${LAB_NAME:kafka-lab}
+    version: 1.0.0
+
+# Logging configuration
+logging:
+  level:
+    com.acme.kafka: INFO
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Spring Boot settings
+spring:
+  application:
+    name: ${LAB_NAME:kafka-payment-lab}
+  
+  # JSON serialization settings
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Actuator endpoints (for monitoring)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
