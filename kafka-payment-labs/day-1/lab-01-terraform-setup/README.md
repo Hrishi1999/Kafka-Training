@@ -30,7 +30,7 @@ Infrastructure as Code (IaC) is a key practice in modern software development. I
 
 1. Log in to [Confluent Cloud](https://confluent.cloud)
 2. Click on your user icon (top right) → "Cloud API keys"
-3. Click "Create Key" → Select "Global access"
+3. Click "Create Key" → "Cloud Resource Management"
 4. Save these credentials securely - you'll need them for Terraform
 
 ### Step 2: Set Up Your Terraform Workspace
