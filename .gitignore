@@ -75,3 +75,4 @@ local_config.py
 #java 
 target
 .terraform
+node_modules
