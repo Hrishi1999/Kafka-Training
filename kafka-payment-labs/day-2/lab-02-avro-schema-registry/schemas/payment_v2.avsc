@@ -1,0 +1,38 @@
+{
+  "namespace": "com.paymentdemo",
+  "type": "record",
+  "name": "Payment",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Payment amount"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "doc": "Currency code (USD, EUR, GBP)"
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "doc": "Customer identifier"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Unix timestamp of payment"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "default": "PENDING",
+      "doc": "Payment status"
+    }
+  ]
+}

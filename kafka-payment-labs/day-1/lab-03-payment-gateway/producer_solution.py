@@ -53,6 +53,11 @@ def main():
         
         # Create producer instance
         producer = Producer(config)
+
+        config['batch.size'] = 65536           # 64KB batches
+        config['linger.ms'] = 10               # Wait 10ms for more records
+        config['compression.type'] = 'snappy'   # Snappy compression
+        config['buffer.memory'] = 67108864     # 64MB buffer
         
         print("🚀 Starting Kafka Producer")
         print("=" * 50)

@@ -15,7 +15,7 @@ export const slidesData: Slide[] = [
       instructor: {
         name: "Hrishi Patel",
         company: "Psyncopate",
-        role: "Consulting Engineer"
+        role: "Consulting Engineer",
       },
       backgroundAnimation: true,
     },
@@ -171,7 +171,7 @@ resource "confluent_kafka_cluster" "payments" {
         },
         {
           key: "sasl.username",
-          value: "${API_KEY}",
+          value: "<<API_KEY>>",
           description: "API key for authentication",
           details:
             "Never hardcode credentials! Use environment variables or secret management systems like HashiCorp Vault.",
@@ -608,7 +608,6 @@ kafka-consumer-perf-test --topic payments \\
       type: "text",
       points: [
         "Cluster exploration: Navigate UI, create topics via CLI",
-        "Metric observation: Set up custom dashboards",
         "Configuration updates: Tune retention and cleanup policies",
         "Performance baseline: Establish throughput and latency benchmarks",
       ],
@@ -2903,8 +2902,1491 @@ class AccountBalanceProcessor:
     section: "Wrap-up",
     content: {
       type: "title",
-      mainTitle: "Congratulations! 🎉",
-      subtitle: "",
+      mainTitle: "Day 1 Complete! 🎉",
+      subtitle: "Ready for Advanced Kafka Development",
+      backgroundAnimation: true,
+    },
+  },
+
+  // Module 6: Day 2 Introduction & Schema Management (Slides 91-110)
+  {
+    id: 91,
+    title: "Day 2: Advanced Kafka Development",
+    module: 6,
+    section: "Introduction",
+    content: {
+      type: "title",
+      mainTitle: "Day 2: Advanced Kafka Development",
+      subtitle: "From JSON to Production-Ready Event Streaming",
+      instructor: {
+        name: "Hrishi Patel",
+        company: "Psyncopate",
+        role: "Consulting Engineer",
+      },
+      backgroundAnimation: true,
+    },
+  },
+  {
+    id: 92,
+    title: "Day 2 Learning Objectives",
+    module: 6,
+    section: "Introduction",
+    content: {
+      type: "text",
+      points: [
+        "Transform Day 1's JSON-based payment system into production-ready architecture",
+        "Implement schema management with Avro and Schema Registry",
+        "Build reliable consumers with manual offset management",
+        "Design resilient error handling with Dead Letter Queues",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 93,
+    title: "Day 1 to Day 2 Evolution",
+    module: 6,
+    section: "Introduction",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "Day1ToDay2Evolution",
+      props: {
+        day1Features: [
+          "Basic JSON producers/consumers",
+          "Simple partitioning strategies",
+          "Basic error handling",
+          "Confluent Cloud setup",
+        ],
+        day2Features: [
+          "Schema Registry & Avro serialization",
+          "FastAPI REST gateway integration",
+          "Manual offset management",
+          "DLQ if we have the time :)",
+        ],
+      },
+    },
+  },
+  {
+    id: 94,
+    title: "The JSON Problem",
+    module: 6,
+    section: "Schema Management",
+    content: {
+      type: "text",
+      points: [
+        "Schema-on-read: Consumers must handle any format changes",
+        "No validation: Bad data reaches consumers and causes failures",
+        "Version conflicts: Producer and consumer schema mismatches",
+        "Debug nightmare: Runtime errors instead of compile-time validation",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 95,
+    title: "JSON Chaos Demonstration",
+    module: 6,
+    section: "Schema Management",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "JSONChaosDemo",
+      props: {
+        scenarios: [
+          {
+            name: "Field Type Change",
+            producer: 'amount: "99.99"',
+            consumer: 'float(message["amount"])',
+            error: "ValueError: could not convert string to float",
+          },
+          {
+            name: "Missing Required Field",
+            producer: '{"customer_id": "123"}',
+            consumer: 'currency = message["currency"]',
+            error: "KeyError: 'currency'",
+          },
+          {
+            name: "Extra Unexpected Field",
+            producer: '{"amount": 99.99, "deprecated_field": true}',
+            consumer: "Processes successfully but ignores field",
+            error: "Silent data loss",
+          },
+        ],
+      },
+    },
+  },
+  {
+    id: 96,
+    title: "Schema Registry Solution",
+    module: 6,
+    section: "Schema Management",
+    content: {
+      type: "text",
+      points: [
+        "Centralized schema storage: Single source of truth for data contracts",
+        "Schema validation: Reject invalid data at produce time",
+        "Evolution support: Backward/forward compatibility rules",
+        "Multi-format support: Avro, JSON Schema, Protobuf",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 97,
+    title: "Avro Deep Dive",
+    module: 6,
+    section: "Schema Management",
+    content: {
+      type: "code",
+      code: `// Payment schema evolution example
+{
+  "type": "record",
+  "name": "Payment",
+  "namespace": "com.psyncopate.payments",
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "customer_id", "type": "string"},
+    {"name": "amount", "type": {"type": "bytes", "logicalType": "decimal", "precision": 10, "scale": 2}},
+    {"name": "currency", "type": "string", "default": "USD"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    
+    // V2 additions with backward compatibility
+    {"name": "merchant_id", "type": "string", "default": ""},
+    {"name": "status", "type": ["null", "string"], "default": null},
+    {"name": "metadata", "type": {"type": "map", "values": "string"}, "default": {}}
+  ]
+}`,
+      language: "json",
+      highlightLines: [7, 11, 12, 13],
+      explanation:
+        "Schema evolution with default values ensures backward compatibility",
+    },
+  },
+  {
+    id: 98,
+    title: "Schema Registry Architecture",
+    module: 6,
+    section: "Schema Management",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "SchemaRegistryArchitecture",
+      props: {
+        showComponents: ["Registry", "Producer", "Consumer", "Schema Store"],
+        showFlow: true,
+        showVersioning: true,
+      },
+    },
+  },
+  {
+    id: 99,
+    title: "Schema Compatibility Modes",
+    module: 6,
+    section: "Schema Management",
+    content: {
+      type: "config",
+      configs: [
+        {
+          key: "BACKWARD",
+          value: "New schema can read old data",
+          description: "Default mode - consumers can handle old messages",
+          details:
+            "Safe to add optional fields with defaults. Cannot remove fields or change types. Most common for consumer upgrades.",
+          importance: "high",
+        },
+        {
+          key: "FORWARD",
+          value: "Old schema can read new data",
+          description: "Producers can evolve without breaking consumers",
+          details:
+            "Safe to remove fields or add optional fields. Cannot change types. Useful for producer-first deployments.",
+          importance: "medium",
+        },
+        {
+          key: "FULL",
+          value: "Both backward and forward compatible",
+          description: "Strictest mode - any order of upgrades works",
+          details:
+            "Can only add/remove optional fields with defaults. Safest but most restrictive for schema evolution.",
+          importance: "high",
+        },
+        {
+          key: "NONE",
+          value: "No compatibility checking",
+          description: "Any schema changes allowed",
+          details:
+            "Use only for development. Breaking changes will cause runtime failures in production.",
+          importance: "low",
+        },
+      ],
+    },
+  },
+  {
+    id: 100,
+    title: "Lab 06 Preview",
+    module: 6,
+    section: "Lab",
+    content: {
+      type: "text",
+      points: [
+        "Experience JSON problems firsthand with breaking changes",
+        "Define Avro schemas with proper field types and defaults",
+        "Implement schema evolution with backward compatibility",
+        "Compare JSON vs Avro performance and safety",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 101,
+    title: "Lab 06 - JSON Baseline",
+    module: 6,
+    section: "Lab",
+    content: {
+      type: "lab",
+      labNumber: "01",
+      title: "JSON Baseline - Understanding the Problem",
+      tasks: [
+        "Implement basic JSON producer sending payment messages",
+        "Create JSON consumer with deserialization and error handling",
+        "Intentionally break the schema (change field types, remove fields)",
+        "Observe and document all failure modes",
+        "Experience schema-on-read problems firsthand",
+      ],
+      expectedOutcome: [
+        "✓ Working JSON producer/consumer pair",
+        "✓ Documented list of JSON schema failure modes",
+        "✓ Clear understanding of why schema management is critical",
+        "✓ Appreciation for the pain points Avro solves",
+      ],
+      hints: [
+        "Use json.dumps() and json.loads() for serialization",
+        "Try changing amount from float to string",
+        "Remove required fields and observe KeyError exceptions",
+        "Document when errors occur - runtime vs compile time",
+      ],
+    },
+  },
+  {
+    id: 102,
+    title: "Lab 07 - Avro & Schema Registry",
+    module: 6,
+    section: "Lab",
+    content: {
+      type: "lab",
+      labNumber: "02",
+      title: "Avro & Schema Registry - Enforcing Contracts",
+      tasks: [
+        "Define payment schema in Avro with proper field types",
+        "Configure producer/consumer with Schema Registry integration",
+        "Implement schema validation and see errors caught at produce time",
+        "Test schema evolution by adding optional fields with defaults",
+        "Verify old consumers work with new producer schemas",
+      ],
+      expectedOutcome: [
+        "✓ Schema Registry integration working with Avro serialization",
+        "✓ Data validation catching errors at produce time",
+        "✓ Successful schema evolution maintaining backward compatibility",
+        "✓ Performance improvement from binary serialization",
+      ],
+      hints: [
+        "Use confluent-kafka[avro] package for Avro support",
+        "Store schemas in .avsc files with proper naming",
+        "Test with intentionally invalid data to see validation",
+        "Use Schema Registry UI to view schema versions",
+      ],
+    },
+  },
+
+  // Module 7: Advanced Producers & FastAPI Integration (Slides 103-122)
+  {
+    id: 103,
+    title: "FastAPI Integration Architecture",
+    module: 7,
+    section: "FastAPI Integration",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "FastAPIArchitecture",
+      props: {
+        showComponents: [
+          "FastAPI",
+          "Kafka Producer",
+          "Schema Registry",
+          "Validation",
+        ],
+        showFlow: true,
+        showScaling: true,
+      },
+    },
+  },
+  {
+    id: 104,
+    title: "Producer Lifecycle Management",
+    module: 7,
+    section: "FastAPI Integration",
+    content: {
+      type: "text",
+      points: [
+        "Anti-pattern: Creating producer per request (expensive connection setup)",
+        "Best practice: Single producer instance shared across requests",
+        "Startup/shutdown: Use FastAPI lifespan events for resource management",
+        "Thread safety: Kafka producers are thread-safe for concurrent requests",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 105,
+    title: "FastAPI Producer Implementation",
+    module: 7,
+    section: "FastAPI Integration",
+    content: {
+      type: "code",
+      code: `# Production-ready FastAPI + Kafka integration
+
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from contextlib import asynccontextmanager
+from confluent_kafka import SerializingProducer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer
+import json
+import uuid
+import time
+
+# Global producer instance
+producer = None
+schema_registry_client = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage producer lifecycle"""
+    global producer, schema_registry_client
+    
+    # Startup: Initialize producer once
+    schema_registry_conf = {'url': 'https://schema-registry.confluent.cloud'}
+    schema_registry_client = SchemaRegistryClient(schema_registry_conf)
+    
+    # Load Avro schema
+    with open('schemas/payment.avsc', 'r') as f:
+        payment_schema = f.read()
+    
+    producer_conf = {
+        'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
+        'key.serializer': StringSerializer('utf_8'),
+        'value.serializer': AvroSerializer(schema_registry_client, payment_schema),
+        'acks': 'all',
+        'enable.idempotence': True,
+        'delivery.timeout.ms': 120000,
+        'retries': 2147483647
+    }
+    
+    producer = SerializingProducer(producer_conf)
+    yield
+    
+    # Shutdown: Flush and close producer
+    producer.flush(timeout=10)
+    producer = None
+
+app = FastAPI(title="Payment Gateway", lifespan=lifespan)
+
+class PaymentRequest(BaseModel):
+    customer_id: str
+    amount: float = Field(gt=0, description="Payment amount must be positive")
+    currency: str = Field(default="USD", regex=r"^[A-Z]{3}$")
+    merchant_id: str
+
+@app.post("/payments")
+async def submit_payment(payment: PaymentRequest, background_tasks: BackgroundTasks):
+    """Submit payment with async processing"""
+    
+    payment_id = str(uuid.uuid4())
+    payment_data = {
+        'payment_id': payment_id,
+        'customer_id': payment.customer_id,
+        'amount': payment.amount,
+        'currency': payment.currency,
+        'merchant_id': payment.merchant_id,
+        'timestamp': int(time.time() * 1000)
+    }
+    
+    try:
+        # Async produce with callback
+        producer.produce(
+            topic='payments-avro',
+            key=payment.customer_id,
+            value=payment_data,
+            callback=lambda err, msg: handle_delivery(err, msg, payment_id)
+        )
+        
+        # Don't wait for delivery - return immediately 
+        return {
+            "payment_id": payment_id,
+            "status": "processing",
+            "message": "Payment submitted successfully"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit payment: {str(e)}")
+
+def handle_delivery(err, msg, payment_id):
+    """Handle delivery confirmation asynchronously"""
+    if err is not None:
+        logger.error(f"Payment {payment_id} delivery failed: {err}")
+        # Send to DLQ or retry logic
+    else:
+        logger.info(f"Payment {payment_id} delivered to partition {msg.partition()}")
+        # Update payment status in database`,
+      language: "python",
+      highlightLines: [15, 16, 17, 29, 30, 31, 64, 65, 66],
+      explanation:
+        "Production FastAPI integration with proper lifecycle management",
+    },
+  },
+  {
+    id: 106,
+    title: "Delivery Guarantees in REST APIs",
+    module: 7,
+    section: "FastAPI Integration",
+    content: {
+      type: "text",
+      points: [
+        "Fire-and-forget (202): Fast response, no delivery guarantee",
+        "Synchronous (200): Wait for ack, slower but confirmed delivery",
+        "Asynchronous callback: Best of both - fast response with async confirmation",
+        "Idempotency: Use payment_id to handle duplicate submissions",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 107,
+    title: "Error Handling Strategies",
+    module: 7,
+    section: "FastAPI Integration",
+    content: {
+      type: "code",
+      code: `# Comprehensive error handling in FastAPI
+
+from fastapi import HTTPException, status
+from confluent_kafka import KafkaError
+import logging
+
+logger = logging.getLogger(__name__)
+
+class PaymentGatewayError(Exception):
+    """Base exception for payment gateway errors"""
+    pass
+
+class PaymentValidationError(PaymentGatewayError):
+    """Payment validation failed"""
+    pass
+
+class KafkaConnectionError(PaymentGatewayError):
+    """Kafka connection issues"""
+    pass
+
+@app.exception_handler(PaymentValidationError)
+async def validation_error_handler(request, exc):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"error": "validation_failed", "message": str(exc)}
+    )
+
+@app.exception_handler(KafkaConnectionError)
+async def kafka_error_handler(request, exc):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"error": "service_unavailable", "message": "Payment system temporarily unavailable"}
+    )
+
+def handle_delivery_errors(err, msg, payment_id):
+    """Enhanced delivery error handling"""
+    if err is not None:
+        if err.code() == KafkaError._MSG_TIMED_OUT:
+            logger.warning(f"Payment {payment_id} timed out - checking cluster health")
+            # Implement retry logic
+            
+        elif err.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+            logger.error(f"Topic configuration error for payment {payment_id}")
+            # Alert operations team
+            
+        elif err.code() == KafkaError._QUEUE_FULL:
+            logger.error(f"Producer queue full for payment {payment_id}")
+            # Implement backpressure
+            
+        else:
+            logger.error(f"Unexpected error for payment {payment_id}: {err}")
+        
+        # Send to DLQ for manual review
+        send_to_dlq(payment_id, err)
+    else:
+        # Success - update payment status
+        update_payment_status(payment_id, "confirmed", msg.partition(), msg.offset())
+
+def send_to_dlq(payment_id, error):
+    """Send failed payments to Dead Letter Queue"""
+    dlq_producer.produce(
+        topic='payments-dlq',
+        key=payment_id,
+        value=json.dumps({
+            'payment_id': payment_id,
+            'error': str(error),
+            'timestamp': int(time.time() * 1000),
+            'retry_count': 0
+        }),
+        headers={'error-type': 'delivery-failed'}
+    )`,
+      language: "python",
+      highlightLines: [25, 26, 27, 32, 33, 34, 45, 46, 47],
+      explanation:
+        "Comprehensive error handling with DLQ pattern for failed deliveries",
+    },
+  },
+  {
+    id: 108,
+    title: "Load Testing & Performance",
+    module: 7,
+    section: "FastAPI Integration",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "FastAPILoadTest",
+      props: {
+        scenarios: [
+          {
+            name: "Single Producer Instance",
+            vus: 100,
+            rps: 8500,
+            latency: "12ms",
+            errors: "0.01%",
+          },
+          {
+            name: "Producer Per Request",
+            vus: 100,
+            rps: 450,
+            latency: "220ms",
+            errors: "2.3%",
+          },
+        ],
+        showMetrics: true,
+      },
+    },
+  },
+  {
+    id: 109,
+    title: "Lab 08 Preview",
+    module: 7,
+    section: "Lab",
+    content: {
+      type: "text",
+      points: [
+        "Build production FastAPI gateway with Kafka integration",
+        "Implement proper producer lifecycle management",
+        "Add comprehensive error handling and validation",
+        "Load test the API and measure performance improvements",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 110,
+    title: "Lab 08 - FastAPI Integration",
+    module: 7,
+    section: "Lab",
+    content: {
+      type: "lab",
+      labNumber: "03",
+      title: "FastAPI Integration - Real-World REST API",
+      tasks: [
+        "Create FastAPI app with Pydantic models matching Avro schema",
+        "Implement proper producer lifecycle with startup/shutdown events",
+        "Add comprehensive error handling for validation and Kafka errors",
+        "Implement async delivery confirmation with callback handling",
+        "Load test with k6 and measure performance vs naive implementation",
+      ],
+      expectedOutcome: [
+        "✓ FastAPI gateway handling 5K+ requests/sec with <50ms latency",
+        "✓ Proper resource management with zero connection leaks",
+        "✓ Comprehensive error handling with appropriate HTTP status codes",
+        "✓ 10x performance improvement over producer-per-request pattern",
+      ],
+      hints: [
+        "Use FastAPI lifespan events for producer initialization",
+        "Implement circuit breaker pattern for Kafka downtime",
+        "Add health checks for Kubernetes readiness probes",
+        "Use async patterns but don't await produce() for best performance",
+      ],
+    },
+  },
+
+  // Module 8: Reliable Consumers & Offset Management (Slides 111-130)
+  {
+    id: 111,
+    title: "The Auto-Commit Problem",
+    module: 8,
+    section: "Offset Management",
+    content: {
+      type: "text",
+      points: [
+        "Auto-commit timing: Offsets committed before processing completes",
+        "Message loss scenario: Consumer crashes after commit but before processing",
+        "The 5-second window: Default auto.commit.interval.ms creates vulnerability",
+        "Production impact: Lost financial transactions are unacceptable",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 112,
+    title: "Auto-Commit Failure Demonstration",
+    module: 8,
+    section: "Offset Management",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "AutoCommitFailure",
+      props: {
+        scenario: "payment-processing",
+        timeline: [
+          { time: 0, event: "Message received", offset: 1234 },
+          { time: 2000, event: "Processing started", status: "working" },
+          { time: 5000, event: "Auto-commit triggered", offset: 1235 },
+          { time: 7000, event: "Consumer crashes", status: "crashed" },
+          { time: 10000, event: "Consumer restarts", offset: 1235 },
+          { time: 12000, event: "Message 1234 lost forever", status: "lost" },
+        ],
+        messageImpact: "$10,000 payment lost",
+      },
+    },
+  },
+  {
+    id: 113,
+    title: "Manual Offset Management",
+    module: 8,
+    section: "Offset Management",
+    content: {
+      type: "code",
+      code: `# Manual offset management for exactly-once processing
+
+from confluent_kafka import Consumer, TopicPartition
+import logging
+
+logger = logging.getLogger(__name__)
+
+class ReliablePaymentProcessor:
+    def __init__(self, consumer_config):
+        # Disable auto-commit for manual control
+        consumer_config['enable.auto.commit'] = False
+        consumer_config['auto.offset.reset'] = 'earliest'
+        
+        self.consumer = Consumer(consumer_config)
+        self.processed_payments = set()  # Idempotency tracking
+        
+    async def process_payments_reliably(self):
+        """Process with at-least-once guarantees"""
+        try:
+            self.consumer.subscribe(['payments-avro'])
+            
+            while True:
+                msg = self.consumer.poll(timeout=1.0)
+                
+                if msg is None:
+                    continue
+                    
+                if msg.error():
+                    logger.error(f"Consumer error: {msg.error()}")
+                    continue
+                
+                try:
+                    # Process message completely before committing
+                    payment_result = await self.process_single_payment(msg)
+                    
+                    # Only commit after successful processing
+                    self.consumer.commit(msg)
+                    
+                    logger.info(f"Payment {payment_result['payment_id']} processed and committed")
+                    
+                except ProcessingError as e:
+                    logger.error(f"Processing failed: {e}")
+                    # Don't commit - message will be reprocessed
+                    await self.handle_processing_error(msg, e)
+                    
+                except Exception as e:
+                    logger.error(f"Unexpected error: {e}")
+                    # Critical errors might need manual intervention
+                    await self.send_to_dlq(msg, e)
+                    # Commit to avoid infinite reprocessing
+                    self.consumer.commit(msg)
+                    
+        finally:
+            logger.info("Closing consumer...")
+            self.consumer.close()
+    
+    async def process_single_payment(self, message):
+        """Process payment with idempotency"""
+        payment_data = message.value()
+        payment_id = payment_data['payment_id']
+        
+        # Idempotency check - skip if already processed
+        if payment_id in self.processed_payments:
+            logger.info(f"Payment {payment_id} already processed, skipping")
+            return {'payment_id': payment_id, 'status': 'duplicate'}
+        
+        # Validate payment
+        await self.validate_payment(payment_data)
+        
+        # Process payment (database updates, external API calls, etc.)
+        result = await self.execute_payment_processing(payment_data)
+        
+        # Mark as processed for idempotency
+        self.processed_payments.add(payment_id)
+        
+        return result
+    
+    async def validate_payment(self, payment_data):
+        """Comprehensive payment validation"""
+        if payment_data['amount'] <= 0:
+            raise ValidationError("Amount must be positive")
+        
+        if not payment_data.get('customer_id'):
+            raise ValidationError("Customer ID is required")
+            
+        # Check customer exists and is active
+        customer = await self.get_customer(payment_data['customer_id'])
+        if not customer or customer['status'] != 'ACTIVE':
+            raise ValidationError("Invalid or inactive customer")
+        
+        # Fraud detection
+        fraud_score = await self.check_fraud_score(payment_data)
+        if fraud_score > 0.8:
+            raise FraudError(f"High fraud risk: {fraud_score}")
+    
+    async def execute_payment_processing(self, payment_data):
+        """Execute payment with external systems"""
+        # Update customer balance
+        await self.update_customer_balance(payment_data)
+        
+        # Record transaction in ledger
+        transaction_id = await self.record_transaction(payment_data)
+        
+        # Send confirmation
+        await self.send_payment_confirmation(payment_data, transaction_id)
+        
+        return {
+            'payment_id': payment_data['payment_id'],
+            'transaction_id': transaction_id,
+            'status': 'processed',
+            'timestamp': int(time.time() * 1000)
+        }`,
+      language: "python",
+      highlightLines: [10, 11, 29, 30, 47, 48, 49],
+      explanation:
+        "Manual offset management ensuring no payment loss with idempotency",
+    },
+  },
+  {
+    id: 114,
+    title: "Batch Processing with Manual Commits",
+    module: 8,
+    section: "Offset Management",
+    content: {
+      type: "text",
+      points: [
+        "Batch benefits: Higher throughput, fewer commits, database transaction optimization",
+        "Partial failure handling: What happens if message 3 of 5 fails?",
+        "Commit strategies: Per message, per batch, or time-based intervals",
+        "Memory considerations: Larger batches require more memory for state tracking",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 115,
+    title: "Batch Consumer Implementation",
+    module: 8,
+    section: "Offset Management",
+    content: {
+      type: "code",
+      code: `# Batch processing with transaction-like semantics
+
+class BatchPaymentProcessor:
+    def __init__(self, consumer_config, batch_size=50):
+        consumer_config['enable.auto.commit'] = False
+        consumer_config['max.poll.records'] = batch_size
+        
+        self.consumer = Consumer(consumer_config)
+        self.batch_size = batch_size
+        self.current_batch = []
+        
+    async def process_batch_payments(self):
+        """Process payments in batches for efficiency"""
+        try:
+            self.consumer.subscribe(['payments-avro'])
+            
+            while True:
+                # Collect batch of messages
+                batch = self.collect_batch()
+                
+                if not batch:
+                    continue
+                
+                try:
+                    # Process entire batch
+                    results = await self.process_payment_batch(batch)
+                    
+                    # Commit only after entire batch succeeds
+                    self.commit_batch(batch)
+                    
+                    logger.info(f"Successfully processed batch of {len(batch)} payments")
+                    
+                except BatchProcessingError as e:
+                    logger.error(f"Batch processing failed: {e}")
+                    # Handle partial failures
+                    await self.handle_batch_failure(batch, e)
+                    
+        finally:
+            self.consumer.close()
+    
+    def collect_batch(self):
+        """Collect messages up to batch size"""
+        batch = []
+        
+        # Collect messages until batch is full or timeout
+        start_time = time.time()
+        timeout_ms = 5000  # 5 second timeout
+        
+        while len(batch) < self.batch_size:
+            remaining_time = max(0, timeout_ms - (time.time() - start_time) * 1000)
+            
+            msg = self.consumer.poll(timeout=remaining_time / 1000)
+            
+            if msg is None:
+                break  # Timeout reached
+                
+            if msg.error():
+                logger.error(f"Consumer error: {msg.error()}")
+                continue
+                
+            batch.append(msg)
+        
+        return batch
+    
+    async def process_payment_batch(self, batch):
+        """Process batch with transaction semantics"""
+        # Extract payment data from messages
+        payments = [msg.value() for msg in batch]
+        
+        # Validate entire batch first
+        validation_errors = []
+        for i, payment in enumerate(payments):
+            try:
+                await self.validate_payment(payment)
+            except ValidationError as e:
+                validation_errors.append((i, payment['payment_id'], str(e)))
+        
+        if validation_errors:
+            raise BatchProcessingError(f"Validation failed for {len(validation_errors)} payments", validation_errors)
+        
+        # Process all payments in database transaction
+        async with self.database.transaction():
+            results = []
+            for payment in payments:
+                result = await self.process_payment_in_db(payment)
+                results.append(result)
+        
+        return results
+    
+    def commit_batch(self, batch):
+        """Commit offsets for entire batch"""
+        if not batch:
+            return
+            
+        # Commit the last message's offset (commits all previous messages)
+        last_msg = batch[-1]
+        self.consumer.commit(last_msg)
+        
+    async def handle_batch_failure(self, batch, error):
+        """Handle batch processing failures"""
+        logger.error(f"Batch of {len(batch)} payments failed: {error}")
+        
+        # Option 1: Process individually to isolate failures
+        good_messages = []
+        failed_messages = []
+        
+        for msg in batch:
+            try:
+                await self.process_single_payment(msg)
+                good_messages.append(msg)
+            except Exception as e:
+                failed_messages.append((msg, e))
+        
+        # Commit successfully processed messages
+        if good_messages:
+            self.commit_batch(good_messages)
+        
+        # Send failed messages to DLQ
+        for msg, error in failed_messages:
+            await self.send_to_dlq(msg, error)
+            # Commit DLQ messages to avoid reprocessing
+            self.consumer.commit(msg)`,
+      language: "python",
+      highlightLines: [21, 22, 23, 60, 61, 62, 87, 88],
+      explanation:
+        "Batch processing with transaction semantics and failure isolation",
+    },
+  },
+  {
+    id: 116,
+    title: "Idempotent Processing Design",
+    module: 8,
+    section: "Offset Management",
+    content: {
+      type: "text",
+      points: [
+        "Idempotency key: Use payment_id to detect and skip duplicate processing",
+        "State storage: Database, Redis, or in-memory cache for tracking processed messages",
+        "Race conditions: Multiple consumers processing same message simultaneously",
+        "Cleanup strategy: Periodic cleanup of old idempotency keys to prevent memory leaks",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 117,
+    title: "Lab 09 Preview",
+    module: 8,
+    section: "Lab",
+    content: {
+      type: "text",
+      points: [
+        "Prove message loss with auto-commit by simulating consumer crashes",
+        "Implement manual commit solution ensuring exactly-once processing",
+        "Design idempotent processing to handle duplicate messages safely",
+        "Compare performance impact of manual vs auto-commit strategies",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 118,
+    title: "Lab 09 - Manual Offset Management",
+    module: 8,
+    section: "Lab",
+    content: {
+      type: "lab",
+      labNumber: "05",
+      title: "Manual Offset Management - Guaranteeing Message Processing",
+      tasks: [
+        "Implement auto-commit consumer and demonstrate message loss on crash",
+        "Convert to manual commit with exactly-once processing guarantees",
+        "Add idempotency logic using payment_id as deduplication key",
+        "Implement batch processing with transaction-like commit semantics",
+        "Test failure scenarios and recovery behavior",
+      ],
+      expectedOutcome: [
+        "✓ Demonstrated auto-commit message loss with crash simulation",
+        "✓ Zero message loss with manual commit implementation",
+        "✓ Idempotent processing handling duplicate messages correctly",
+        "✓ Batch processing improving throughput by 3x while maintaining reliability",
+      ],
+      hints: [
+        "Use sleep() to simulate processing time longer than auto-commit interval",
+        "Test with sys.exit(1) to simulate abrupt consumer crashes",
+        "Store processed payment IDs in Redis for idempotency tracking",
+        "Use database transactions to ensure atomicity of batch processing",
+      ],
+    },
+  },
+
+  // Module 9: Resilience Patterns & Error Handling (Slides 119-138)
+  {
+    id: 119,
+    title: "Resilience Patterns Overview",
+    module: 9,
+    section: "Resilience",
+    content: {
+      type: "text",
+      points: [
+        "Dead Letter Queue (DLQ): Isolate poison pill messages from healthy processing",
+        "Circuit breaker: Fail fast when external dependencies are down",
+        "Exponential backoff: Intelligent retry timing for transient failures",
+        "Bulkhead pattern: Isolate different message types for fault tolerance",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 120,
+    title: "The Blocking Anti-Pattern",
+    module: 9,
+    section: "Resilience",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "BlockingAntiPattern",
+      props: {
+        scenario: {
+          partition: 2,
+          blockedMessage: "Payment with invalid merchant_id",
+          backlogCount: 15847,
+          impact: "15,847 valid payments blocked behind 1 bad message",
+          timeBlocked: "47 minutes",
+        },
+        showImpact: true,
+      },
+    },
+  },
+  {
+    id: 121,
+    title: "Dead Letter Queue Implementation",
+    module: 9,
+    section: "Resilience",
+    content: {
+      type: "code",
+      code: `# Production-ready Dead Letter Queue implementation
+
+import json
+import time
+from confluent_kafka import Producer, Consumer
+from enum import Enum
+
+class ErrorCategory(Enum):
+    VALIDATION_ERROR = "validation_error"
+    PROCESSING_ERROR = "processing_error"
+    EXTERNAL_SERVICE_ERROR = "external_service_error"
+    POISON_PILL = "poison_pill"
+
+class DeadLetterQueueManager:
+    def __init__(self, dlq_producer_config):
+        self.dlq_producer = Producer(dlq_producer_config)
+        self.retry_topics = {
+            1: 'payments-retry-1',    # 1 minute delay
+            2: 'payments-retry-5',    # 5 minute delay
+            3: 'payments-retry-15',   # 15 minute delay
+        }
+        self.dlq_topic = 'payments-dlq'
+        
+    async def handle_processing_error(self, original_message, error, category: ErrorCategory):
+        """Route messages based on error type and retry count"""
+        
+        # Extract retry information from headers
+        headers = dict(original_message.headers() or [])
+        retry_count = int(headers.get('retry-count', 0))
+        original_topic = headers.get('original-topic', original_message.topic())
+        
+        error_metadata = {
+            'original_topic': original_topic,
+            'original_partition': original_message.partition(),
+            'original_offset': original_message.offset(),
+            'error_category': category.value,
+            'error_message': str(error),
+            'error_timestamp': int(time.time() * 1000),
+            'retry_count': retry_count,
+            'original_key': original_message.key(),
+            'original_value': original_message.value()
+        }
+        
+        # Determine routing based on error category and retry count
+        if category == ErrorCategory.POISON_PILL:
+            # Poison pills go directly to DLQ
+            await self.send_to_dlq(error_metadata)
+            
+        elif category == ErrorCategory.EXTERNAL_SERVICE_ERROR and retry_count < 3:
+            # Retry external service errors with exponential backoff
+            await self.send_to_retry_topic(error_metadata, retry_count + 1)
+            
+        elif category == ErrorCategory.VALIDATION_ERROR:
+            # Validation errors rarely succeed on retry - send to DLQ
+            await self.send_to_dlq(error_metadata)
+            
+        elif retry_count >= 3:
+            # Max retries exceeded - send to DLQ
+            await self.send_to_dlq(error_metadata)
+            
+        else:
+            # Default retry logic
+            await self.send_to_retry_topic(error_metadata, retry_count + 1)
+    
+    async def send_to_retry_topic(self, error_metadata, retry_count):
+        """Send to appropriate retry topic based on retry count"""
+        retry_topic = self.retry_topics.get(retry_count, self.dlq_topic)
+        
+        # Calculate delay based on retry count
+        delay_minutes = [1, 5, 15][min(retry_count - 1, 2)]
+        scheduled_time = int(time.time() * 1000) + (delay_minutes * 60 * 1000)
+        
+        headers = {
+            'retry-count': str(retry_count),
+            'original-topic': error_metadata['original_topic'],
+            'error-category': error_metadata['error_category'],
+            'scheduled-time': str(scheduled_time),
+            'correlation-id': str(uuid.uuid4())
+        }
+        
+        # Produce to retry topic
+        self.dlq_producer.produce(
+            topic=retry_topic,
+            key=error_metadata['original_key'],
+            value=json.dumps(error_metadata),
+            headers=headers,
+            callback=self.delivery_callback
+        )
+        
+        logger.info(f"Sent message to {retry_topic} (retry {retry_count})")
+    
+    async def send_to_dlq(self, error_metadata):
+        """Send message to Dead Letter Queue for manual review"""
+        headers = {
+            'error-category': error_metadata['error_category'],
+            'final-failure': 'true',
+            'requires-manual-review': 'true',
+            'dlq-timestamp': str(int(time.time() * 1000))
+        }
+        
+        self.dlq_producer.produce(
+            topic=self.dlq_topic,
+            key=error_metadata['original_key'],
+            value=json.dumps(error_metadata),
+            headers=headers,
+            callback=self.delivery_callback
+        )
+        
+        # Alert operations team for critical errors
+        if error_metadata['error_category'] in ['external_service_error', 'poison_pill']:
+            await self.alert_operations_team(error_metadata)
+        
+        logger.warning(f"Message sent to DLQ: {error_metadata['error_category']}")
+    
+    def delivery_callback(self, err, msg):
+        """Handle DLQ delivery confirmation"""
+        if err is not None:
+            logger.error(f"DLQ delivery failed: {err}")
+            # DLQ delivery failure is critical - alert immediately
+        else:
+            logger.debug(f"Message delivered to {msg.topic()}")`,
+      language: "python",
+      highlightLines: [18, 19, 20, 21, 40, 41, 42, 75, 76, 77],
+      explanation:
+        "Multi-tier error handling with intelligent routing and retry logic",
+    },
+  },
+  {
+    id: 122,
+    title: "Retry Topic Architecture",
+    module: 9,
+    section: "Resilience",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "RetryTopicArchitecture",
+      props: {
+        topics: [
+          { name: "payments-main", type: "primary", delay: "0ms" },
+          { name: "payments-retry-1", type: "retry", delay: "1min" },
+          { name: "payments-retry-5", type: "retry", delay: "5min" },
+          { name: "payments-retry-15", type: "retry", delay: "15min" },
+          { name: "payments-dlq", type: "dlq", delay: "manual" },
+        ],
+        showFlow: true,
+        showMetrics: true,
+      },
+    },
+  },
+  {
+    id: 123,
+    title: "Circuit Breaker Pattern",
+    module: 9,
+    section: "Resilience",
+    content: {
+      type: "code",
+      code: `# Circuit breaker for external service calls
+
+from enum import Enum
+import time
+import asyncio
+
+class CircuitState(Enum):
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Failing fast
+    HALF_OPEN = "half_open" # Testing recovery
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, timeout=60, success_threshold=3):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout  # seconds
+        self.success_threshold = success_threshold
+        
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time = None
+        self.state = CircuitState.CLOSED
+        
+    async def call(self, func, *args, **kwargs):
+        """Execute function with circuit breaker protection"""
+        
+        if self.state == CircuitState.OPEN:
+            if self._should_attempt_reset():
+                self.state = CircuitState.HALF_OPEN
+                logger.info("Circuit breaker half-open - testing recovery")
+            else:
+                raise CircuitBreakerOpenError("Circuit breaker is open")
+        
+        try:
+            result = await func(*args, **kwargs)
+            self._record_success()
+            return result
+            
+        except Exception as e:
+            self._record_failure()
+            raise e
+    
+    def _record_success(self):
+        """Record successful call"""
+        if self.state == CircuitState.HALF_OPEN:
+            self.success_count += 1
+            if self.success_count >= self.success_threshold:
+                self._reset_circuit()
+        else:
+            self.failure_count = 0
+    
+    def _record_failure(self):
+        """Record failed call"""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.state == CircuitState.HALF_OPEN:
+            self._open_circuit()
+        elif self.failure_count >= self.failure_threshold:
+            self._open_circuit()
+    
+    def _should_attempt_reset(self):
+        """Check if enough time has passed to attempt reset"""
+        return (time.time() - self.last_failure_time) >= self.timeout
+    
+    def _open_circuit(self):
+        """Open circuit breaker"""
+        self.state = CircuitState.OPEN
+        self.success_count = 0
+        logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
+    
+    def _reset_circuit(self):
+        """Reset circuit breaker to closed state"""
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.success_count = 0
+        logger.info("Circuit breaker reset to closed state")
+
+# Usage in payment processor
+class ResilientPaymentProcessor:
+    def __init__(self):
+        self.fraud_service_breaker = CircuitBreaker(failure_threshold=3, timeout=30)
+        self.customer_service_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
+        
+    async def process_payment_with_resilience(self, payment_data):
+        """Process payment with circuit breaker protection"""
+        try:
+            # Fraud check with circuit breaker
+            fraud_score = await self.fraud_service_breaker.call(
+                self.check_fraud_score, payment_data
+            )
+            
+            if fraud_score > 0.8:
+                raise FraudError(f"High fraud risk: {fraud_score}")
+            
+            # Customer validation with circuit breaker
+            customer = await self.customer_service_breaker.call(
+                self.validate_customer, payment_data['customer_id']
+            )
+            
+            # Process payment
+            result = await self.execute_payment(payment_data)
+            return result
+            
+        except CircuitBreakerOpenError as e:
+            logger.warning(f"Circuit breaker open: {e}")
+            # Fallback processing without external service
+            return await self.process_payment_fallback(payment_data)
+            
+        except Exception as e:
+            logger.error(f"Payment processing failed: {e}")
+            raise ProcessingError(f"Failed to process payment: {e}")
+    
+    async def process_payment_fallback(self, payment_data):
+        """Fallback processing when external services are down"""
+        # Basic validation without external services
+        if payment_data['amount'] <= 0:
+            raise ValidationError("Invalid amount")
+        
+        # Process with reduced functionality
+        result = {
+            'payment_id': payment_data['payment_id'],
+            'status': 'processed_fallback',
+            'requires_manual_review': True,
+            'timestamp': int(time.time() * 1000)
+        }
+        
+        # Queue for later verification when services recover
+        await self.queue_for_verification(payment_data)
+        
+        return result`,
+      language: "python",
+      highlightLines: [22, 23, 24, 25, 40, 41, 42, 85, 86, 87],
+      explanation:
+        "Circuit breaker pattern preventing cascade failures with intelligent fallback",
+    },
+  },
+  {
+    id: 124,
+    title: "Non-Blocking Retry System",
+    module: 9,
+    section: "Resilience",
+    content: {
+      type: "text",
+      points: [
+        "Retry topics: Separate topics for different retry delays (1min, 5min, 15min)",
+        "Scheduled processing: Use message timestamp to control retry timing",
+        "Retry consumers: Dedicated consumers for retry topic processing",
+        "Exponential backoff: Increasing delays prevent thundering herd problems",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 125,
+    title: "Monitoring & Alerting",
+    module: 9,
+    section: "Resilience",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "ResilienceMonitoring",
+      props: {
+        metrics: [
+          {
+            name: "DLQ Messages",
+            value: "23",
+            threshold: 100,
+            status: "healthy",
+            trend: "stable",
+          },
+          {
+            name: "Retry Rate",
+            value: "2.3%",
+            threshold: 5,
+            status: "healthy",
+            trend: "down",
+          },
+          {
+            name: "Circuit Breaker State",
+            value: "CLOSED",
+            status: "healthy",
+            details: "Fraud service: CLOSED, Customer service: CLOSED",
+          },
+          {
+            name: "Processing Latency",
+            value: "45ms",
+            threshold: 100,
+            status: "healthy",
+            trend: "stable",
+          },
+        ],
+        alerts: [
+          "DLQ growth rate > 10 messages/minute",
+          "Circuit breaker open for > 5 minutes",
+          "Retry rate > 10% for 15 minutes",
+        ],
+      },
+    },
+  },
+  {
+    id: 126,
+    title: "Lab 10 Preview",
+    module: 9,
+    section: "Lab",
+    content: {
+      type: "text",
+      points: [
+        "Implement fragile consumer with blocking retries to see the anti-pattern",
+        "Build Dead Letter Queue system for poison pill message isolation",
+        "Create non-blocking retry system with exponential backoff",
+        "Add circuit breaker protection for external service dependencies",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 127,
+    title: "Lab 10 - Resilience Patterns",
+    module: 9,
+    section: "Lab",
+    content: {
+      type: "lab",
+      labNumber: "04",
+      title: "Resilience Patterns - Building Bulletproof Consumers",
+      tasks: [
+        "Implement blocking consumer that fails on bad messages to demonstrate anti-pattern",
+        "Build comprehensive DLQ system with categorized error routing",
+        "Create retry topic architecture with exponential backoff delays",
+        "Add circuit breaker pattern for external service protection",
+        "Implement monitoring dashboard for resilience metrics",
+      ],
+      expectedOutcome: [
+        "✓ DLQ system isolating poison pills from healthy message processing",
+        "✓ 99.9% message processing success rate with intelligent retry logic",
+        "✓ Circuit breaker preventing cascade failures during service outages",
+        "✓ Comprehensive monitoring with automated alerting for operations team",
+      ],
+      hints: [
+        "Use separate Kafka topics for different retry delays",
+        "Implement message scheduling using timestamp headers",
+        "Test circuit breaker with artificial service failures",
+        "Add correlation IDs for end-to-end message tracing",
+      ],
+    },
+  },
+  {
+    id: 128,
+    title: "Production Deployment Checklist",
+    module: 9,
+    section: "Production",
+    content: {
+      type: "text",
+      points: [
+        "Schema Registry: Backup schemas, configure compatibility policies",
+        "Consumer groups: Plan group IDs, partition assignments, scaling strategies",
+        "Monitoring: Set up alerts for lag, errors, circuit breaker states",
+        "Disaster recovery: DLQ processing procedures, schema evolution plans",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 129,
+    title: "Day 2 Success Metrics",
+    module: 9,
+    section: "Wrap-up",
+    content: {
+      type: "text",
+      points: [
+        "✅ Migrated from JSON to Avro with schema evolution support",
+        "✅ Built production FastAPI gateway handling 5K+ RPS",
+        "✅ Implemented exactly-once processing with manual offset management",
+        "✅ Created resilient error handling with DLQ and circuit breakers",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 130,
+    title: "Day 2 Complete - Production Architecture!",
+    module: 9,
+    section: "Wrap-up",
+    content: {
+      type: "title",
+      mainTitle: "Day 2 Complete! 🚀",
+      subtitle: "Production-Ready Event Streaming Architecture",
       backgroundAnimation: true,
     },
   },

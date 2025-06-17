@@ -16,7 +16,7 @@ class KafkaConfig:
     @staticmethod
     def create_consumer_config(
         group_id: Optional[str] = None,
-        auto_offset_reset: str = 'earliest',
+        auto_offset_reset: str = 'latest',
         enable_auto_commit: bool = True,
         **kwargs
     ) -> Dict[str, str]:

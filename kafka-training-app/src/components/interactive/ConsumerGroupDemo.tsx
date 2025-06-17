@@ -129,80 +129,96 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
   // Simulate message production
   const produceMessage = useCallback(() => {
     const partition = Math.floor(Math.random() * partitionCount);
-    const newMessage: Message = {
-      id: `msg-${messageIdCounter}`,
-      partition,
-      offset: partitions[partition]?.highWatermark || 0,
-      timestamp: new Date(),
-      processed: false,
-      processingTime: 0
-    };
-
+    
+    setPartitions(prev => {
+      const currentPartition = prev[partition];
+      const newMessage: Message = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        partition,
+        offset: currentPartition?.highWatermark || 0,
+        timestamp: new Date(),
+        processed: false,
+        processingTime: 0
+      };
+      
+      return prev.map(p => 
+        p.id === partition
+          ? {
+              ...p,
+              messages: [...p.messages.slice(-9), newMessage],
+              highWatermark: p.highWatermark + 1
+            }
+          : p
+      );
+    });
+    
     setMessageIdCounter(prev => prev + 1);
     setTotalMessages(prev => prev + 1);
-
-    setPartitions(prev => prev.map(p => 
-      p.id === partition
-        ? {
-            ...p,
-            messages: [...p.messages.slice(-9), newMessage],
-            highWatermark: p.highWatermark + 1
-          }
-        : p
-    ));
-  }, [messageIdCounter, partitionCount, partitions]);
+  }, [partitionCount]);
 
   // Simulate message consumption
   const consumeMessages = useCallback(() => {
-    setPartitions(prev => prev.map(partition => {
-      if (!partition.assignedTo || partition.messages.length === 0) return partition;
+    // Stop consumption during rebalancing
+    if (isRebalancing) return;
+    
+    let consumerMetrics = new Map<string, { lag: number, processed: number }>();
+    
+    setPartitions(prev => {
+      const newPartitions = prev.map(partition => {
+        if (!partition.assignedTo || partition.messages.length === 0) return partition;
 
-      const consumer = consumers.find(c => c.id === partition.assignedTo);
-      if (!consumer || consumer.status !== 'active') return partition;
+        const consumer = consumers.find(c => c.id === partition.assignedTo);
+        if (!consumer || consumer.status !== 'active') return partition;
 
-      const unprocessedMessages = partition.messages.filter(m => !m.processed);
-      if (unprocessedMessages.length === 0) return partition;
+        const unprocessedMessages = partition.messages.filter(m => !m.processed);
+        if (unprocessedMessages.length === 0) return partition;
 
-      // Process messages based on consumer rate
-      const messagesToProcess = Math.min(
-        Math.ceil(consumer.processingRate / 2), // Process every 500ms
-        unprocessedMessages.length
-      );
+        // Process messages based on consumer rate
+        const messagesToProcess = Math.min(
+          Math.ceil(consumer.processingRate / 2), // Process every 500ms
+          unprocessedMessages.length
+        );
 
-      const updatedMessages = partition.messages.map(msg => {
-        if (!msg.processed && messagesToProcess > 0) {
-          const processingTime = Date.now() - msg.timestamp.getTime();
-          return { ...msg, processed: true, processingTime };
-        }
-        return msg;
+        let processedCount = 0;
+        const updatedMessages = partition.messages.map(msg => {
+          if (!msg.processed && processedCount < messagesToProcess) {
+            processedCount++;
+            const processingTime = Date.now() - msg.timestamp.getTime();
+            return { ...msg, processed: true, processingTime };
+          }
+          return msg;
+        });
+
+        // Track metrics
+        const currentMetrics = consumerMetrics.get(consumer.id) || { lag: 0, processed: 0 };
+        consumerMetrics.set(consumer.id, {
+          lag: currentMetrics.lag + (partition.highWatermark - partition.currentOffset - processedCount),
+          processed: currentMetrics.processed + processedCount
+        });
+
+        return {
+          ...partition,
+          messages: updatedMessages,
+          currentOffset: partition.currentOffset + processedCount
+        };
       });
-
-      return {
-        ...partition,
-        messages: updatedMessages,
-        currentOffset: partition.currentOffset + messagesToProcess
-      };
-    }));
-
-    // Update consumer metrics
-    setConsumers(prev => prev.map(consumer => {
-      const assignedPartitions = partitions.filter(p => p.assignedTo === consumer.id);
-      const totalLag = assignedPartitions.reduce((sum, p) => 
-        sum + (p.highWatermark - p.currentOffset), 0
-      );
-      const processedInThisRound = assignedPartitions.reduce((sum, p) => {
-        const processed = p.messages.filter(m => m.processed).length;
-        return sum + processed;
-      }, 0);
-
-      return {
-        ...consumer,
-        lag: totalLag,
-        processedCount: consumer.processedCount + processedInThisRound,
-        lastHeartbeat: new Date()
-      };
-    }));
-  }, [consumers, partitions]);
+      
+      // Update consumer metrics after we have all the data
+      setConsumers(prevConsumers => prevConsumers.map(consumer => {
+        const metrics = consumerMetrics.get(consumer.id);
+        if (!metrics || consumer.status !== 'active') return consumer;
+        
+        return {
+          ...consumer,
+          lag: metrics.lag,
+          processedCount: consumer.processedCount + metrics.processed,
+          lastHeartbeat: new Date()
+        };
+      }));
+      
+      return newPartitions;
+    });
+  }, [consumers, isRebalancing]);
 
   // Auto-run simulation
   useEffect(() => {
@@ -217,17 +233,33 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
     };
   }, [isRunning, produceMessage, consumeMessages]);
 
-  // Trigger rebalancing
+  // Trigger rebalancing with proper stop-the-world behavior
   const triggerRebalance = useCallback(() => {
     setIsRebalancing(true);
     setRebalanceCount(prev => prev + 1);
 
-    // Mark all consumers as rebalancing
-    setConsumers(prev => prev.map(c => ({ ...c, status: 'rebalancing' as const })));
+    // Phase 1: Stop all consumers and revoke partitions (STOP THE WORLD)
+    setConsumers(prev => prev.map(c => ({ 
+      ...c, 
+      status: c.status === 'failed' ? 'failed' : 'rebalancing' as const,
+      partitions: [] // Immediately revoke all partitions
+    })));
+    
+    // Clear all partition assignments
+    setPartitions(prev => prev.map(p => ({
+      ...p,
+      assignedTo: undefined
+    })));
 
+    // Phase 2: Rebalance after delay
     setTimeout(() => {
       setConsumers(prev => {
-        const updatedConsumers = prev.map(c => ({ ...c, status: 'active' as const }));
+        const activeConsumers = prev.filter(c => c.status !== 'failed');
+        const updatedConsumers = prev.map(c => 
+          c.status === 'failed' ? c : { ...c, status: 'active' as const }
+        );
+        
+        // Perform assignment
         assignPartitions(updatedConsumers);
         return updatedConsumers;
       });
@@ -268,26 +300,40 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
   };
 
   // Reset simulation
-  const reset = () => {
+  const reset = useCallback(() => {
     setIsRunning(false);
     setMessageIdCounter(0);
     setTotalMessages(0);
     setRebalanceCount(0);
-    setPartitions(prev => prev.map(p => ({
-      ...p,
+    setIsRebalancing(false);
+    
+    // Reset partitions
+    setPartitions(Array.from({ length: partitionCount }, (_, i) => ({
+      id: i,
       currentOffset: 0,
       highWatermark: 0,
       messages: [],
       assignedTo: undefined
     })));
-    setConsumers(prev => prev.map(c => ({
-      ...c,
+    
+    // Reset consumers
+    const resetConsumers: Consumer[] = Array.from({ length: initialConsumers }, (_, i) => ({
+      id: `consumer-${i + 1}`,
       partitions: [],
+      status: 'active',
       processedCount: 0,
       lag: 0,
-      status: 'active' as const
-    })));
-  };
+      lastHeartbeat: new Date(),
+      processingRate: 5 + Math.random() * 5
+    }));
+    
+    setConsumers(resetConsumers);
+    
+    // Re-assign partitions after reset
+    setTimeout(() => {
+      assignPartitions(resetConsumers);
+    }, 100);
+  }, [partitionCount, initialConsumers, assignPartitions]);
 
   const getStatusColor = (status: Consumer['status']) => {
     switch (status) {
@@ -351,6 +397,23 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
           <span>Reset</span>
         </button>
       </div>
+
+      {/* Rebalancing Alert */}
+      {isRebalancing && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
+        >
+          <div className="flex items-center space-x-2">
+            <RotateCcw className="h-5 w-5 text-yellow-600 animate-spin" />
+            <span className="font-semibold text-yellow-800">Rebalancing in Progress</span>
+          </div>
+          <p className="text-sm text-yellow-700 mt-1">
+            All consumers have stopped processing. Partitions are being reassigned...
+          </p>
+        </motion.div>
+      )}
 
       {/* Metrics Dashboard */}
       {showMetrics && (
@@ -511,9 +574,9 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
         </div>
       </div>
 
-      {/* Load Balancing Info */}
+      {/* Rebalancing Behavior Info */}
       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h4 className="font-semibold text-blue-800 mb-3">Consumer Group Load Balancing</h4>
+        <h4 className="font-semibold text-blue-800 mb-3">Kafka Consumer Group Rebalancing</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <h5 className="font-medium text-gray-800 mb-2">Current Distribution:</h5>
@@ -527,14 +590,23 @@ const ConsumerGroupDemo: React.FC<ConsumerGroupDemoProps> = ({
             </ul>
           </div>
           <div>
-            <h5 className="font-medium text-gray-800 mb-2">Key Principles:</h5>
+            <h5 className="font-medium text-gray-800 mb-2">Rebalancing Process:</h5>
             <ul className="space-y-1 text-gray-600">
-              <li>• Each partition consumed by only one consumer in the group</li>
-              <li>• Partitions redistributed when consumers join/leave</li>
-              <li>• Rebalancing temporarily pauses consumption</li>
-              <li>• Aim for even distribution across consumers</li>
+              <li>• All consumers stop processing (stop-the-world)</li>
+              <li>• All partitions are revoked from consumers</li>
+              <li>• Partitions are reassigned based on strategy</li>
+              <li>• Consumers resume processing after assignment</li>
+              <li>• Process takes ~2 seconds (configurable)</li>
             </ul>
           </div>
+        </div>
+        <div className="mt-3 p-3 bg-blue-100 rounded text-sm">
+          <strong className="text-blue-800">Current behavior:</strong>
+          <ul className="mt-1 space-y-1 text-blue-700">
+            <li>• Range assignment: Consecutive partitions assigned to each consumer</li>
+            <li>• Triggers: Consumer join/leave/failure or manual rebalance</li>
+            <li>• During rebalance: Message production continues, consumption pauses</li>
+          </ul>
         </div>
       </div>
     </div>

@@ -5,6 +5,8 @@ Custom Partitioner - Demonstrates custom partitioning strategies for Kafka
 
 import sys
 import os
+
+from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from confluent_kafka import Producer
@@ -161,10 +163,15 @@ class CustomPartitioner:
         
         self.producer = Producer(config)
         self.topic = 'payment_requests'
-        
+        load_dotenv()
+
         # Get partition count
         admin_config = {
-            'bootstrap.servers': os.getenv('CONFLUENT_BOOTSTRAP_SERVERS', 'localhost:9092')
+            'bootstrap.servers': os.getenv('BOOTSTRAP_SERVERS', 'localhost:9092'),
+            'security.protocol': os.getenv('SECURITY_PROTOCOL', 'SASL_SSL'),
+            'sasl.mechanism': os.getenv('SASL_MECHANISM', 'PLAIN'),
+            'sasl.username': os.getenv('SASL_USERNAME'),
+            'sasl.password': os.getenv('SASL_PASSWORD'),
         }
         admin = AdminClient(admin_config)
         metadata = admin.list_topics(topic=self.topic)

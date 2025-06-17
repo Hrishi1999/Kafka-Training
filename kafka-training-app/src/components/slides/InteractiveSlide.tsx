@@ -8,6 +8,7 @@ interface InteractiveSlideProps {
 
 // Dynamically import interactive components
 const componentMap: Record<string, React.LazyExoticComponent<React.FC<any>>> = {
+  // Day 1 Components
   SystemArchitecture: lazy(() => import('../interactive/SystemArchitecture')),
   ConfluentCloudDemo: lazy(() => import('../interactive/ConfluentCloudDemo')),
   ProjectStructure: lazy(() => import('../interactive/ProjectStructure')),
@@ -29,6 +30,17 @@ const componentMap: Record<string, React.LazyExoticComponent<React.FC<any>>> = {
   OrderingDemo: lazy(() => import('../interactive/OrderingDemo')),
   PartitionMonitoring: lazy(() => import('../interactive/PartitionMonitoring')),
   PartitionTestResults: lazy(() => import('../interactive/PartitionTestResults')),
+  
+  // Day 2 Components
+  Day1ToDay2Evolution: lazy(() => import('../interactive/Day1ToDay2Evolution')),
+  JSONChaosDemo: lazy(() => import('../interactive/JSONChaosDemo')),
+  SchemaRegistryArchitecture: lazy(() => import('../interactive/SchemaRegistryArchitecture')),
+  FastAPIArchitecture: lazy(() => import('../interactive/FastAPIArchitecture')),
+  FastAPILoadTest: lazy(() => import('../interactive/FastAPILoadTest')),
+  AutoCommitFailure: lazy(() => import('../interactive/AutoCommitFailure')),
+  BlockingAntiPattern: lazy(() => import('../interactive/BlockingAntiPattern')),
+  RetryTopicArchitecture: lazy(() => import('../interactive/RetryTopicArchitecture')),
+  ResilienceMonitoring: lazy(() => import('../interactive/ResilienceMonitoring')),
 };
 
 export const InteractiveSlide: React.FC<InteractiveSlideProps> = ({ content }) => {

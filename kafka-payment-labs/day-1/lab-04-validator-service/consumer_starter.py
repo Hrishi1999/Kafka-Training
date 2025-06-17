@@ -36,15 +36,26 @@ def process_payment(message_value: str) -> bool:
         True if processing succeeded, False otherwise
     """
     try:
-        # TODO 4: Process the payment message
-        # 1. Parse the JSON message
-        # 2. Extract payment details (payment_id, amount, customer_id)
-        # 3. Print the payment information
-        # 4. Return True if successful
+        # Parse the JSON message
+        payment = json.loads(message_value)
         
-        # Your code here
-        pass
+        # Extract payment details
+        payment_id = payment.get('payment_id', 'Unknown')
+        amount = payment.get('amount', 0)
+        customer_id = payment.get('customer_id', 'Unknown')
+        currency = payment.get('currency', 'USD')
         
+        # Print payment information
+        print(f"💳 Processing Payment:")
+        print(f"   ID: {payment_id}")
+        print(f"   Customer: {customer_id}")
+        print(f"   Amount: {currency} {amount:.2f}")
+        
+        return True
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in message: {e}")
+        return False
     except Exception as e:
         print(f"❌ Error processing payment: {e}")
         return False
@@ -59,18 +70,19 @@ def main():
         # Validate configuration
         KafkaConfig.validate_config()
         
-        # TODO 1: Create consumer configuration
         # Use KafkaConfig.create_consumer_config() with:
         # - group_id: 'payment-validator'
         # - auto_offset_reset: 'earliest'
-        config = {}  # Replace with actual configuration
-        
+        config = KafkaConfig.create_consumer_config(
+            group_id='payment-validator',
+            auto_offset_reset='earliest'
+        )        
         # Create consumer instance
         consumer = Consumer(config)
         
-        # TODO 2: Subscribe to the topic
         # Subscribe to 'payment_requests' topic
         # Hint: consumer.subscribe(['topic_name'])
+        consumer.subscribe(['payment_requests'])
         
         print("🚀 Starting Payment Validator Consumer")
         print("=" * 50)
@@ -78,8 +90,7 @@ def main():
         
         # Message counter
         message_count = 0
-        
-        # TODO 3: Implement the poll loop
+        error_count = 0        
         # While running is True:
         # 1. Poll for a message with timeout of 1.0 second
         # 2. If message is None, continue
@@ -88,9 +99,38 @@ def main():
         # 5. Increment message_count
         
         while running:
-            # Your code here
-            pass
-        
+
+            msg = consumer.poll(timeout=100)
+            if msg is None:
+                continue
+
+            if msg.error():
+                # Handle errors
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    # End of partition - this is normal
+                    print(f"📭 Reached end of partition {msg.partition()}")
+                else:
+                    # Real error
+                    print(f"❌ Consumer error: {msg.error()}")
+                    error_count += 1
+                    # retryable -> retry topic
+                    # else go to dlt topic
+            else:
+                message_value = msg.value().decode('utf-8')
+                # Show message metadata
+                print(f"\n📨 Message #{message_count + 1}")
+                print(f"   Topic: {msg.topic()}")
+                print(f"   Partition: {msg.partition()}")
+                print(f"   Offset: {msg.offset()}")
+
+                if process_payment(message_value):
+                    message_count += 1
+                else:
+                    error_count += 1
+                    # retry topic
+                
+                print("-" * 40)
+
         # TODO 5: Handle graceful shutdown
         # 1. Print the total messages processed
         # 2. Close the consumer

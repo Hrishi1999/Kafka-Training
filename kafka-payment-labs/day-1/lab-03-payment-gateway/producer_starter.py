@@ -25,7 +25,13 @@ def delivery_callback(err, msg):
     # TODO 2: Implement the delivery callback
     # - If err is not None, print an error message
     # - If successful, print the topic, partition, and offset
-    pass  # Remove this when you implement
+    if err is not None:
+        print(f"❌ Message delivery failed: {err}")
+    else:
+        value = json.loads(msg.value().decode('utf-8'))
+        print(f"✅ Message delivered to {msg.topic()} "
+              f"[partition {msg.partition()}] at offset {msg.offset()}")
+        print(f"   Payment ID: {value['payment_id']}, Amount: ${value['amount']}")
 
 
 def create_payment_message(payment_id: int) -> dict:
@@ -45,12 +51,18 @@ def main():
         # Validate configuration
         KafkaConfig.validate_config()
         
-        # TODO 1: Create producer configuration using KafkaConfig
         # Hint: Use KafkaConfig.create_producer_config()
-        config = {}  # Replace with actual configuration
+        config = KafkaConfig.create_producer_config()
         
         # Create producer instance
         producer = Producer(config)
+
+        config.update({
+            'batch.size': 65536,           # 64KB - larger batches = better throughput
+            'linger.ms': 10,               # Wait 10ms to fill batches - improves throughput
+            'compression.type': 'lz4',   # Compress messages to reduce network usage
+            'buffer.memory': 67108864,     # 64MB for high-throughput producers
+        })
         
         print("🚀 Starting Kafka Producer")
         print("=" * 50)
@@ -71,9 +83,19 @@ def main():
         
         for i in range(num_messages):
             # Your code here
-            pass
+            payment = create_payment_message(i)
+            json_value = json.dumps(payment)
+            producer.produce(
+                topic=topic,
+                value=json_value.encode('utf-8'),
+                callback=delivery_callback
+            )
+
+            producer.poll(0)
+            time.sleep(0.1)
         
         print(f"\n📤 Initiated sending {num_messages} messages")
+        producer.flush(timeout=10)
         
         # TODO 4: Ensure all messages are sent
         # Hint: Use producer.flush() with a timeout

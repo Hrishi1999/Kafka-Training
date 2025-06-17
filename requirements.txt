@@ -1,0 +1,29 @@
+# Core Kafka dependencies
+confluent-kafka==2.3.0
+
+# Avro serialization support
+confluent-kafka[avro]==2.3.0
+avro==1.11.3
+
+# Web framework for producer API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Data validation and serialization
+pydantic==2.5.1
+
+# Logging
+python-json-logger==2.0.7
+
+# Async support
+asyncio-mqtt==0.16.1
+
+# Testing (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Development tools (optional)
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1

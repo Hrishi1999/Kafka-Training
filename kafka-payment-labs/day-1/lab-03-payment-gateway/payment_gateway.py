@@ -91,7 +91,7 @@ class PaymentGateway:
         """
         try:
             # Use payment_id as the message key for ordering guarantees
-            key = payment_request['payment_id']
+            key = payment_request['customer_id']
             
             # Serialize to JSON
             value = json.dumps(payment_request)
@@ -207,7 +207,7 @@ def main():
         # Simulate payment traffic
         gateway.simulate_payment_traffic(
             num_payments=100,
-            delay_ms=50  # 50ms between payments (~20 payments/sec)
+            delay_ms=0  # 50ms between payments (~20 payments/sec)
         )
         
         # Clean up

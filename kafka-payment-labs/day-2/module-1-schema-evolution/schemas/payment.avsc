@@ -1,0 +1,33 @@
+{
+  "namespace": "com.paymentdemo.events",
+  "type": "record", 
+  "name": "Payment",
+  "doc": "Payment transaction event",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    },
+    {
+      "name": "amount", 
+      "type": "double",
+      "doc": "Payment amount in decimal format"
+    },
+    {
+      "name": "currency",
+      "type": "string", 
+      "doc": "ISO 4217 currency code"
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "doc": "Customer identifier"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Unix timestamp of payment creation"
+    }
+  ]
+}
