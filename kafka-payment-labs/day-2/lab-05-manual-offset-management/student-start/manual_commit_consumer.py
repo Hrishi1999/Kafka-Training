@@ -53,7 +53,7 @@ class ManualCommitConsumer:
         """
         TODO: Main consumer loop with manual commits
         - Create consumer
-        - Subscribe to 'payments-avro' topic
+        - Subscribe to 'payment_requests' topic
         - For each message:
           1. Process the payment
           2. Only commit if processing succeeds

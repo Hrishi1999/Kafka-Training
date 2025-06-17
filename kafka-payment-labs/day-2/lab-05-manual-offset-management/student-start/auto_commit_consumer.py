@@ -49,7 +49,7 @@ class AutoCommitConsumer:
         """
         TODO: Main consumer loop
         - Create consumer
-        - Subscribe to 'payments-avro' topic
+        - Subscribe to 'payment_requests' topic
         - Poll for messages
         - For each message, simulate processing
         - Handle errors appropriately

@@ -8,13 +8,16 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from common.config import KafkaConfig
-from confluent_kafka import Consumer, KafkaError
-from confluent_kafka.avro import AvroConsumer
+from confluent_kafka import Consumer, KafkaError, TopicPartition
 from confluent_kafka.schema_registry import SchemaRegistryClient
-from confluent_kafka.avro.serializer import SerializerError
+from confluent_kafka.serialization import SerializationContext, MessageField
+from confluent_kafka.schema_registry.avro import AvroDeserializer
 import time
 import signal
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class ManualCommitConsumer:
     def __init__(self):
@@ -28,35 +31,32 @@ class ManualCommitConsumer:
         
     def create_consumer(self):
         """Create consumer with manual commit"""
-        # Separate Kafka and Schema Registry configurations
-        consumer_config = KafkaConfig.create_avro_consumer_config(
-            group_id='payment-processor-manual',
-            enable_auto_commit=False  # Manual commit
-        )
+        consumer_config = KafkaConfig.create_consumer_config()
+        consumer_config.update({
+            'group.id': 'payment-processor-manual',
+            'enable.auto.commit': False,  # Manual commit
+            'session.timeout.ms': 10000,
+            'max.poll.interval.ms': 300000,
+            'auto.offset.reset': 'earliest'
+        })
         
-        # Schema Registry configuration with correct auth format
+        # Create Schema Registry client
         schema_registry_config = {
             'url': os.getenv('SCHEMA_REGISTRY_URL'),
-            'basic.auth.credentials.source': 'USER_INFO',
             'basic.auth.user.info': f"{os.getenv('SCHEMA_REGISTRY_API_KEY')}:{os.getenv('SCHEMA_REGISTRY_API_SECRET')}"
         }
         schema_registry_client = SchemaRegistryClient(schema_registry_config)
         
-        # Add additional consumer settings
-        consumer_config.update({
-            'session.timeout.ms': 10000,
-            'max.poll.interval.ms': 300000
-        })
+        # Create Avro deserializer
+        self.avro_deserializer = AvroDeserializer(schema_registry_client)
         
-        return AvroConsumer(
-            consumer_config,
-            schema_registry=schema_registry_client
-        )
+        return Consumer(consumer_config)
     
     def process_payment(self, message):
         """Process payment reliably"""
         try:
-            payment = message.value()
+            # Deserialize Avro message
+            payment = self.avro_deserializer(message.value(), SerializationContext(message.topic(), MessageField.VALUE))
             partition = message.partition()
             offset = message.offset()
             
@@ -68,7 +68,7 @@ class ManualCommitConsumer:
             print(f"Timestamp: {datetime.fromtimestamp(payment['timestamp'])}")
             
             # Check committed offset
-            topic_partition = [(message.topic(), partition)]
+            topic_partition = [TopicPartition(message.topic(), partition)]
             committed = self.consumer.committed(topic_partition)[0]
             print(f"\nCurrent committed offset: {committed.offset if committed else 'None'}")
             print(f"Message offset: {offset}")
@@ -178,9 +178,9 @@ def demonstrate_scenarios():
     print("   - If crash during processing: Message lost")
     print("   - Use only for non-critical data")
     
-    print("\n3. EXACTLY-ONCE (Requires transactions or idempotency):")
+    print("\n3. EXACTLY-ONCE (Requires transactions):")
     print("   - Process + Commit in transaction")
-    print("   - OR: Idempotent processing with at-least-once")
+    print("   - OR: Duplicate detection with at-least-once")
     print("   - Best for financial systems")
     
     print("\n" + "="*70)

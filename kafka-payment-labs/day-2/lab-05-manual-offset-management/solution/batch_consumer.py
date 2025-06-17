@@ -9,12 +9,16 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from common.config import KafkaConfig
 from confluent_kafka import Consumer, KafkaError, TopicPartition
-from confluent_kafka.avro import AvroConsumer
 from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.serialization import SerializationContext, MessageField
+from confluent_kafka.schema_registry.avro import AvroDeserializer
 import time
 import signal
 from datetime import datetime
 from collections import defaultdict
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class BatchConsumer:
     def __init__(self, batch_size=5):
@@ -36,13 +40,15 @@ class BatchConsumer:
             enable_auto_commit=False
         )
         
-        # Schema Registry configuration with correct auth format
+        # Schema Registry configuration - SchemaRegistryClient uses different format
         schema_registry_config = {
             'url': os.getenv('SCHEMA_REGISTRY_URL'),
-            'basic.auth.credentials.source': 'USER_INFO',
             'basic.auth.user.info': f"{os.getenv('SCHEMA_REGISTRY_API_KEY')}:{os.getenv('SCHEMA_REGISTRY_API_SECRET')}"
         }
         schema_registry_client = SchemaRegistryClient(schema_registry_config)
+        
+        # Create Avro deserializer
+        self.avro_deserializer = AvroDeserializer(schema_registry_client)
         
         # Add additional consumer settings
         consumer_config.update({
@@ -50,10 +56,7 @@ class BatchConsumer:
             'max.poll.interval.ms': 300000
         })
         
-        return AvroConsumer(
-            consumer_config,
-            schema_registry=schema_registry_client
-        )
+        return Consumer(consumer_config)
     
     def process_batch(self, messages):
         """Process a batch of messages"""
@@ -64,7 +67,7 @@ class BatchConsumer:
         try:
             # Validate all messages first
             for i, msg in enumerate(messages):
-                payment = msg.value()
+                payment = self.avro_deserializer(msg.value(), SerializationContext(msg.topic(), MessageField.VALUE))
                 print(f"{i+1}. Payment {payment['payment_id']}: "
                       f"${payment['amount']:.2f} {payment['currency']}")
                 

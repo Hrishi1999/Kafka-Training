@@ -4,7 +4,7 @@
 - Understand the dangers of auto-commit
 - Implement at-least-once processing guarantees
 - Prove message loss scenarios
-- Design idempotent processing
+- Handle manual offset management correctly
 
 ## Prerequisites
 - Understanding of consumer groups
@@ -49,12 +49,12 @@ In `batch_consumer.py`:
 3. Commit only after batch succeeds
 4. What happens if message 3 of 5 fails?
 
-### Step 4: Idempotent Processing Design
+### Step 4: Error Handling Strategy
 
-Design (don't implement) a solution for:
-1. Database updates that won't duplicate
-2. Payment processing that won't double-charge
-3. Using payment_id as idempotency key
+Design an error handling approach for:
+1. Transient failures (network issues)
+2. Permanent failures (invalid data)
+3. Partial batch processing failures
 
 ### Experiments to Try
 
@@ -83,7 +83,7 @@ Design (don't implement) a solution for:
 - [ ] Demonstrated message loss with auto-commit
 - [ ] Implemented reliable manual commit consumer
 - [ ] Understood at-least-once guarantees
-- [ ] Designed idempotent processing approach
+- [ ] Designed error handling strategy
 - [ ] Measured performance implications
 
 ## Hints
@@ -96,7 +96,7 @@ Design (don't implement) a solution for:
 - Committing before processing (data loss)
 - Not handling rebalance during processing
 - Assuming exactly-once without transactions
-- Forgetting idempotency
+- Not implementing proper error handling
 
 ## Real-World Scenario
 

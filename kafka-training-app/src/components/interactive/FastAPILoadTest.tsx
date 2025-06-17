@@ -102,16 +102,16 @@ const FastAPILoadTest: React.FC<FastAPILoadTestProps> = ({
               }}
               className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                 selectedScenario === index
-                  ? index === 0
+                  ? index === 1
                     ? 'border-red-500 bg-red-50'
                     : 'border-green-500 bg-green-50'
                   : 'border-gray-200 bg-gray-50 hover:border-gray-300'
               }`}
             >
               <h5 className={`font-semibold mb-3 ${
-                index === 0 ? 'text-red-600' : 'text-green-600'
+                index === 1 ? 'text-red-600' : 'text-green-600'
               }`}>
-                {index === 0 ? '❌' : '✅'} {scenario.name}
+                {index === 1 ? '❌' : '✅'} {scenario.name}
               </h5>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
