@@ -76,7 +76,7 @@ def process_payment(payment):
 def fragile_consumer_loop():
     """THE WRONG WAY - Blocking retries"""
     consumer = create_consumer()
-    consumer.subscribe(['payments-avro'])
+    consumer.subscribe(['payment_requests'])
     
     try:
         while True:
@@ -204,7 +204,7 @@ def process_payment_with_dlq():
     """Non-blocking consumer with DLQ"""
     consumer = create_consumer()
     dlq_producer = DLQProducer()
-    consumer.subscribe(['payments-avro'])
+    consumer.subscribe(['payment_requests'])
     
     try:
         while True:
@@ -234,7 +234,7 @@ def process_payment_with_dlq():
                 print(f"❌ Processing failed: {e}")
                 
                 # Send to DLQ instead of retrying
-                dlq_producer.send_to_dlq(msg, e, 'payments-avro')
+                dlq_producer.send_to_dlq(msg, e, 'payment_requests')
                 
                 # Commit the offset to skip the poison pill
                 consumer.commit()
@@ -275,7 +275,7 @@ def analyze_dlq():
     })
     
     consumer = Consumer(config)
-    consumer.subscribe(['payments-avro-dlq'])
+    consumer.subscribe(['payment_requests-dlq'])
     
     error_counts = {}
     
@@ -391,7 +391,7 @@ def process_with_retries():
     })
     
     retry_producer = RetryProducer()
-    consumer.subscribe(['payments-avro'])
+    consumer.subscribe(['payment_requests'])
     
     try:
         while True:
@@ -457,7 +457,7 @@ def create_retry_processor(retry_level, delay_seconds):
         consumer = Consumer(config)
         producer = Producer(get_kafka_config())
         
-        retry_topic = f'payments-avro-retry-{retry_level}'
+        retry_topic = f'payment_requests-retry-{retry_level}'
         consumer.subscribe([retry_topic])
         
         print(f"🔄 Started retry processor for level {retry_level} (delay: {delay_seconds}s)")
@@ -477,7 +477,7 @@ def create_retry_processor(retry_level, delay_seconds):
                 
                 # Send back to main topic for retry
                 producer.produce(
-                    topic='payments-avro',
+                    topic='payment_requests',
                     key=msg.key(),
                     value=msg.value(),
                     headers=msg.headers()
