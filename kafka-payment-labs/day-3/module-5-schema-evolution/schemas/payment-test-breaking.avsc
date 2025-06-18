@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "Payment",
+  "namespace": "com.payment.avro",
+  "doc": "Test breaking schema - should be incompatible",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    }
+  ]
+}

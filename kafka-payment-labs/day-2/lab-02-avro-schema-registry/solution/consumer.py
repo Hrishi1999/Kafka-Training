@@ -15,7 +15,7 @@ from datetime import datetime
 def create_avro_consumer():
     """Create and return an AvroConsumer"""
     # Use prefixed configuration approach for better compatibility
-    consumer_config = KafkaConfig.create_avro_consumer_config(
+    consumer_config = KafkaConfig.create_consumer_config(
         group_id='payment-processor-avro',
         enable_auto_commit=True
     )

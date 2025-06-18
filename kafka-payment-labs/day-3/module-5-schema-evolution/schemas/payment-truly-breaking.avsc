@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "Payment",
+  "namespace": "com.payment.avro",
+  "doc": "Truly breaking schema - removes required field without default",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "default": "USD",
+      "doc": "Currency code"
+    }
+  ]
+}

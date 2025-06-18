@@ -1,0 +1,19 @@
+{
+  "name": "postgres-payments-source",
+  "config": {
+    "connector.class": "PostgresSource",
+    "name": "postgres-payments-source",
+    "kafka.auth.mode": "KAFKA_API_KEY",
+    "kafka.api.key": "XLKBPNH6CQC5WWNT",
+    "kafka.api.secret": "pzHXvHmG/W6MH+6ib/hqowNgcFUMN5tJZP7i7mEj8JkngFTLxP5ef/3bDhfNfBFt",
+    "connection.host": "6.tcp.ngrok.io",
+    "connection.port": "14185",
+    "connection.user": "payment_user",
+    "connection.password": "payment_pass",
+    "db.name": "payments",
+    "table.whitelist": "payments",
+    "incrementing.column.name": "id",
+    "output.data.format": "AVRO",
+    "tasks.max": "1"
+  }
+}

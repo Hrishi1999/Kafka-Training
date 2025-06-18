@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "Payment",
+  "namespace": "com.payment.avro",
+  "doc": "Payment record schema v2 - BREAKING: Adds required field without default",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Payment amount in USD"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "default": "USD",
+      "doc": "Currency code"
+    },
+    {
+      "name": "merchant_id",
+      "type": "string",
+      "doc": "Merchant identifier"
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "doc": "Customer identifier"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Payment timestamp (epoch milliseconds)"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "PaymentStatus",
+        "symbols": ["PENDING", "PROCESSED", "FAILED", "REFUNDED"]
+      },
+      "default": "PENDING",
+      "doc": "Payment processing status"
+    },
+    {
+      "name": "fraud_risk_level",
+      "type": "string",
+      "doc": "BREAKING: New required field without default - cannot read old data without this field"
+    }
+  ]
+}

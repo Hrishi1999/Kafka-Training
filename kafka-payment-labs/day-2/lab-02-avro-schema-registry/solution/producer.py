@@ -30,7 +30,7 @@ def delivery_report(err, msg):
 def create_avro_producer(schema):
     """Create and return an AvroProducer"""
     # Use prefixed configuration approach for better compatibility
-    producer_config = KafkaConfig.create_avro_producer_config()
+    producer_config = KafkaConfig.create_producer_config()
     schema_registry_config = KafkaConfig.create_schema_registry_config()
     
     # Combine configurations with schema.registry. prefix
@@ -104,7 +104,7 @@ def main():
     print("Starting Avro producer...")
     
     # Load schema
-    schema = load_avro_schema('../schemas/payment.avsc')
+    schema = load_avro_schema('../schemas/payment_v2.avsc')
     
     # Create producer
     producer = create_avro_producer(schema)
@@ -122,7 +122,7 @@ def main():
         producer.flush()
         
         # Test schema validation
-        test_schema_validation(producer)
+        # test_schema_validation(producer)
         
     except KeyboardInterrupt:
         print("\nShutting down...")

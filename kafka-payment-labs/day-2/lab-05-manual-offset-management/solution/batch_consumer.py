@@ -35,7 +35,7 @@ class BatchConsumer:
     def create_consumer(self):
         """Create consumer for batch processing"""
         # Separate Kafka and Schema Registry configurations
-        consumer_config = KafkaConfig.create_avro_consumer_config(
+        consumer_config = KafkaConfig.create_consumer_config(
             group_id='payment-processor-batch',
             enable_auto_commit=False
         )

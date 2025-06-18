@@ -1,0 +1,102 @@
+groups:
+  - name: payment_processing_alerts
+    rules:
+      # High error rate in payment processing
+      - alert: HighPaymentErrorRate
+        expr: |
+          (
+            rate(messages_consumed_total{status="failed"}[5m]) / 
+            rate(messages_consumed_total[5m])
+          ) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: consumer
+        annotations:
+          summary: "High payment processing error rate"
+          description: "Payment processing error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # High API error rate
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m]) / 
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          component: producer
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # Consumer lag is too high
+      - alert: HighConsumerLag
+        expr: consumer_lag_messages > 1000
+        for: 3m
+        labels:
+          severity: warning
+          component: consumer
+        annotations:
+          summary: "Consumer lag is high"
+          description: "Consumer lag is {{ $value }} messages on topic {{ $labels.topic }} partition {{ $labels.partition }}"
+
+      # Consumer is down
+      - alert: ConsumerDown
+        expr: up{job="payment-consumer"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: consumer
+        annotations:
+          summary: "Payment consumer is down"
+          description: "Payment consumer has been down for more than 1 minute"
+
+      # Producer is down
+      - alert: ProducerDown
+        expr: up{job="payment-producer"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: producer
+        annotations:
+          summary: "Payment producer API is down"
+          description: "Payment producer API has been down for more than 1 minute"
+
+      # High processing latency
+      - alert: HighProcessingLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(message_processing_duration_seconds_bucket{status="success"}[5m])
+          ) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          component: consumer
+        annotations:
+          summary: "High message processing latency"
+          description: "95th percentile processing latency is {{ $value }}s over the last 5 minutes"
+
+      # Frequent consumer rebalances
+      - alert: FrequentRebalances
+        expr: rate(consumer_rebalances_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: consumer
+        annotations:
+          summary: "Frequent consumer rebalances"
+          description: "Consumer is rebalancing {{ $value }} times per second over the last 10 minutes"
+
+  - name: infrastructure_alerts
+    rules:
+      # Prometheus target down
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target is down"
+          description: "Target {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute"

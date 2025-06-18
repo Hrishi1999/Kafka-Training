@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # FastAPI Payment Producer
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: payment-producer
+    ports:
+      - "8000:8000"
+    environment:
+      # Kafka Configuration
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS}
+      - SASL_USERNAME=${SASL_USERNAME}
+      - SASL_PASSWORD=${SASL_PASSWORD}
+      - SECURITY_PROTOCOL=${SECURITY_PROTOCOL}
+      - SASL_MECHANISM=${SASL_MECHANISM}
+    volumes:
+      - ../../../common:/app/common:ro
+      - ./logs:/app/logs
+    networks:
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8000"
+      - "prometheus.path=/metrics"
+
+  # Kafka Payment Consumer
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    container_name: payment-consumer
+    ports:
+      - "8001:8001"
+    environment:
+      # Kafka Configuration
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS}
+      - SASL_USERNAME=${SASL_USERNAME}
+      - SASL_PASSWORD=${SASL_PASSWORD}
+      - SECURITY_PROTOCOL=${SECURITY_PROTOCOL}
+      - SASL_MECHANISM=${SASL_MECHANISM}
+      - CONSUMER_GROUP_ID=${CONSUMER_GROUP_ID:-payment-consumer-monitoring-demo}
+    volumes:
+      - ../../../common:/app/common:ro
+      - ./logs:/app/logs
+    networks:
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - producer
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8001"
+      - "prometheus.path=/metrics"
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Grafana
+  grafana:
+    image: grafana/grafana-oss:9.3.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Load Generator (Optional - for testing)
+  load-generator:
+    image: curlimages/curl:8.4.0
+    container_name: load-generator
+    networks:
+      - monitoring
+    depends_on:
+      - producer
+    command: >
+      sh -c "
+        echo 'Waiting for producer to be ready...' &&
+        until curl -f http://producer:8000/health; do
+          echo 'Producer not ready, waiting...'
+          sleep 5
+        done &&
+        echo 'Starting load generation...' &&
+        while true; do
+          curl -X POST http://producer:8000/payments/batch \
+            -H 'Content-Type: application/json' \
+            -H 'X-Correlation-ID: load-test-$(date +%s)' \
+            -d '{
+              \"payments\": [
+                {
+                  \"payment_id\": \"LOAD-$(date +%s)-1\",
+                  \"amount\": 99.99,
+                  \"merchant_id\": \"MERCH-LOAD-001\",
+                  \"customer_id\": \"CUST-LOAD-001\",
+                  \"description\": \"Load test payment\"
+                },
+                {
+                  \"payment_id\": \"LOAD-$(date +%s)-2\",
+                  \"amount\": 149.50,
+                  \"merchant_id\": \"MERCH-LOAD-002\",
+                  \"customer_id\": \"CUST-LOAD-002\",
+                  \"description\": \"Load test payment\"
+                }
+              ]
+            }' &&
+          sleep 10
+        done
+      "
+    restart: unless-stopped
+    profiles:
+      - load-test  # Only start with: docker-compose --profile load-test up
+
+networks:
+  monitoring:
+    driver: bridge
+    name: kafka-payment-monitoring
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

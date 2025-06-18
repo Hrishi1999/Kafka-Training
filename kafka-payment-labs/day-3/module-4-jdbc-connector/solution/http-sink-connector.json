@@ -1,0 +1,19 @@
+{
+  "name": "http-payments-sink",
+  "config": {
+    "connector.class": "HttpSink",
+    "name": "http-payments-sink",
+    "kafka.auth.mode": "KAFKA_API_KEY",
+    "kafka.api.key": "XLKBPNH6CQC5WWNT",
+    "kafka.api.secret": "pzHXvHmG/W6MH+6ib/hqowNgcFUMN5tJZP7i7mEj8JkngFTLxP5ef/3bDhfNfBFt",
+    "input.data.format": "AVRO",
+    "topics": "payments",
+    "http.api.url": "https://http-test-latest.onrender.com/payments",
+    "request.method": "POST",
+    "headers": "Content-Type:application/json",
+    "batch.max.size": "1",
+    "retry.backoff.ms": "3000",
+    "max.retries": "3",
+    "tasks.max": "1"
+  }
+}

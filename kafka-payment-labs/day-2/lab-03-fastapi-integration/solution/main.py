@@ -51,7 +51,7 @@ def load_avro_schema(schema_path: str):
 def create_producer(schema):
     """Create Avro producer with delivery callback"""
     # Use the same prefixed configuration approach that works in lab-02
-    producer_config = KafkaConfig.create_avro_producer_config()
+    producer_config = KafkaConfig.create_producer_config()
     
     # Combine configurations with schema.registry. prefix
     config = {
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
     
     try:
         # Load schema
-        schema = load_avro_schema('../schemas/payment.avsc')
+        schema = load_avro_schema('./schemas/payment.avsc')
         
         # Create producer
         producer = create_producer(schema)

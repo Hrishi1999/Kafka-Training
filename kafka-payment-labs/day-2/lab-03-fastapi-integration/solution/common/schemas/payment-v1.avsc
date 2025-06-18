@@ -1,0 +1,68 @@
+{
+  "namespace": "com.acme.payments",
+  "type": "record",
+  "name": "Payment",
+  "doc": "Payment request record - Version 1.0",
+  "fields": [
+    {
+      "name": "payment_id",
+      "type": "string",
+      "doc": "Unique payment identifier"
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "doc": "Customer identifier"
+    },
+    {
+      "name": "merchant_id",
+      "type": "string",
+      "doc": "Merchant identifier"
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "doc": "Payment amount"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "doc": "Currency code (ISO 4217)"
+    },
+    {
+      "name": "payment_method",
+      "type": "string",
+      "doc": "Payment method (credit_card, debit_card, bank_transfer, etc.)"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "doc": "Payment status (pending, processing, completed, failed)"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Payment timestamp in milliseconds since epoch"
+    },
+    {
+      "name": "metadata",
+      "type": [
+        "null",
+        {
+          "type": "record",
+          "name": "PaymentMetadata",
+          "fields": [
+            {"name": "source", "type": "string"},
+            {"name": "version", "type": "string"},
+            {"name": "region", "type": ["null", "string"], "default": null}
+          ]
+        }
+      ],
+      "default": null,
+      "doc": "Additional metadata about the payment"
+    }
+  ]
+}
