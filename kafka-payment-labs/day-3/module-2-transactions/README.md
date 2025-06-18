@@ -1,4 +1,4 @@
-# Module 4: Kafka Transactions - Atomic Payment Processing
+# Module 2: Kafka Transactions - Atomic Payment Processing
 
 ## 🎯 Learning Objectives
 

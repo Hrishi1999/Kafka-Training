@@ -21,7 +21,8 @@ export const LabSlide: React.FC<LabSlideProps> = ({ content }) => {
     setCompletedTasks(newCompleted);
   };
 
-  const progress = (completedTasks.size / content.tasks.length) * 100;
+  const tasks = content.tasks || content.steps || [];
+  const progress = tasks.length > 0 ? (completedTasks.size / tasks.length) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -35,7 +36,12 @@ export const LabSlide: React.FC<LabSlideProps> = ({ content }) => {
           <h3 className="text-xl font-semibold text-gray-900">{content.title}</h3>
         </div>
         <div className="text-sm text-gray-600">
-          {completedTasks.size} / {content.tasks.length} completed
+          {completedTasks.size} / {tasks.length} completed
+          {content.estimatedTime && (
+            <div className="text-xs text-gray-500 mt-1">
+              Estimated time: {content.estimatedTime}
+            </div>
+          )}
         </div>
       </div>
 
@@ -54,7 +60,7 @@ export const LabSlide: React.FC<LabSlideProps> = ({ content }) => {
           <Target className="h-5 w-5 text-blue-600" />
           <span className="text-gray-900">Tasks</span>
         </h4>
-        {content.tasks.map((task, index) => (
+        {tasks.map((task, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -20 }}
@@ -84,13 +90,14 @@ export const LabSlide: React.FC<LabSlideProps> = ({ content }) => {
       </div>
 
       {/* Expected Outcomes */}
-      <div className="space-y-3">
-        <h4 className="text-lg font-semibold flex items-center space-x-2">
-          <CheckCircle className="h-5 w-5 text-green-600" />
-          <span className="text-gray-900">Expected Outcomes</span>
-        </h4>
-        <div className="space-y-2">
-          {content.expectedOutcome.map((outcome, index) => (
+      {content.expectedOutcome && content.expectedOutcome.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-lg font-semibold flex items-center space-x-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-gray-900">Expected Outcomes</span>
+          </h4>
+          <div className="space-y-2">
+            {content.expectedOutcome.map((outcome, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0 }}
@@ -100,9 +107,10 @@ export const LabSlide: React.FC<LabSlideProps> = ({ content }) => {
             >
               <span className="text-sm text-green-800">{outcome}</span>
             </motion.div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Hints */}
       {content.hints && content.hints.length > 0 && (

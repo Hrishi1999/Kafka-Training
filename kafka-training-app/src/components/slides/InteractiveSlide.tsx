@@ -41,6 +41,16 @@ const componentMap: Record<string, React.LazyExoticComponent<React.FC<any>>> = {
   BlockingAntiPattern: lazy(() => import('../interactive/BlockingAntiPattern')),
   RetryTopicArchitecture: lazy(() => import('../interactive/RetryTopicArchitecture')),
   ResilienceMonitoring: lazy(() => import('../interactive/ResilienceMonitoring')),
+  
+  // Day 3 Components
+  ACLSecurityArchitecture: lazy(() => import('../interactive/ACLSecurityArchitecture')),
+  TransactionProblemDemo: lazy(() => import('../interactive/TransactionProblemDemo')),
+  TransactionCoordinatorFlow: lazy(() => import('../interactive/TransactionCoordinatorFlow')),
+  MonitoringArchitecture: lazy(() => import('../interactive/MonitoringArchitecture')),
+  GrafanaDashboardDemo: lazy(() => import('../interactive/GrafanaDashboardDemo')),
+  SchemaEvolutionDemo: lazy(() => import('../interactive/SchemaEvolutionDemo')),
+  KafkaConnectArchitecture: lazy(() => import('../interactive/KafkaConnectArchitecture')),
+  FinalArchitectureOverview: lazy(() => import('../interactive/FinalArchitectureOverview')),
 };
 
 export const InteractiveSlide: React.FC<InteractiveSlideProps> = ({ content }) => {

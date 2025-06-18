@@ -4390,6 +4390,1228 @@ class ResilientPaymentProcessor:
       backgroundAnimation: true,
     },
   },
+
+  // Module 10: Day 3 Introduction & Security (Slides 131-150)
+  {
+    id: 131,
+    title: "Day 3: Production Operations & Security",
+    module: 10,
+    section: "Introduction",
+    content: {
+      type: "title",
+      mainTitle: "Day 3: Production Operations & Security",
+      subtitle: "ACLs, Transactions, Monitoring, and Schema Evolution",
+      instructor: {
+        name: "Hrishi Patel",
+        company: "Psyncopate",
+        role: "Consulting Engineer",
+      },
+      backgroundAnimation: true,
+    },
+  },
+  {
+    id: 132,
+    title: "Day 3 Learning Objectives",
+    module: 10,
+    section: "Introduction",
+    content: {
+      type: "text",
+      points: [
+        "Secure Kafka clusters with ACLs and implement PCI compliance",
+        "Master exactly-once semantics with Kafka transactions",
+        "Build comprehensive monitoring with Prometheus & Grafana",
+        "Integrate external systems with Kafka Connect",
+        "Handle schema evolution without breaking consumers",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 133,
+    title: "Real-World Incidents We'll Prevent",
+    module: 10,
+    section: "Introduction",
+    content: {
+      type: "text",
+      points: [
+        "PCI Compliance Failure: Analytics service accessing raw card data",
+        "Double-Charge Catastrophe: $2.3M revenue loss from duplicate payments",
+        "Silent Data Loss: Processing failures without alerting",
+        "Schema Breaking Change: 47 consumers down on Friday night",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 134,
+    title: "Security Incident: PCI Compliance Failure",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "text",
+      points: [
+        "URGENT: Failed PCI DSS audit - analytics accessing raw payment data!",
+        "Issue: All services have unrestricted access to sensitive topics",
+        "Impact: Potential fines, loss of payment processing license",
+        "Solution: Implement proper ACLs with principle of least privilege",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 135,
+    title: "Payment Pipeline Security Architecture",
+    module: 10,
+    section: "Security & ACLs",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "ACLSecurityArchitecture",
+      props: {
+        showDataFlow: true,
+        highlightSecurity: true,
+      },
+    },
+  },
+  {
+    id: 136,
+    title: "ACL Fundamentals",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "text",
+      points: [
+        "Principal: WHO can perform actions (User, Service Account)",
+        "Resource: WHAT is being accessed (Topic, ConsumerGroup, Cluster)",
+        "Operation: HOW it can be accessed (READ, WRITE, DESCRIBE)",
+        "Permission Type: ALLOW or DENY (default is DENY)",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 137,
+    title: "Service Account Strategy",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "code",
+      language: "yaml",
+      code: `# Service Account Permissions Matrix
+payment-gateway-service:
+  - Topic: payments.raw        → WRITE only
+  - Description: Produces payment requests
+
+fraud-detection-service:
+  - Topic: payments.raw        → READ only
+  - Topic: payments.scored     → WRITE only
+  - ConsumerGroup: fraud-cg    → READ
+
+reporting-service:
+  - Topic: reports.daily       → READ only (no PII)
+  - Topic: payments.*          → DENY (explicitly blocked)
+  
+admin-emergency-service:
+  - Cluster: *                 → ALL (break-glass only)`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 138,
+    title: "ACL Lab: The Great Lock-out",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "lab",
+      title: "Fixing Payment Pipeline Security",
+      steps: [
+        "Run all services - watch them fail with authorization errors",
+        "Document specific failures (TopicAuthorizationException)",
+        "Fix payment gateway with UI - grant WRITE to payments.raw",
+        "Fix fraud detector with CLI - READ/WRITE permissions",
+        "Implement proper consumer group permissions",
+        "Test end-to-end payment flow with security enabled",
+      ],
+      estimatedTime: "25 minutes",
+    },
+  },
+  {
+    id: 139,
+    title: "Common ACL Pitfalls",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "code",
+      language: "bash",
+      code: `# ❌ The Wildcard Trap
+confluent kafka acl create --allow \\
+  --service-account sa-xxxx \\
+  --operations ALL \\
+  --topic "*"  # NEVER DO THIS!
+
+# ❌ Missing Consumer Group Permission
+# Grant topic access but forget consumer group
+--topic payments.raw --operations READ
+# Missing: --consumer-group myapp-cg --operations READ
+
+# ✅ Production-Ready Pattern
+confluent kafka acl create --allow \\
+  --service-account sa-fraud \\
+  --operations READ,DESCRIBE --topic payments.raw
+
+confluent kafka acl create --allow \\
+  --service-account sa-fraud \\
+  --operations READ,DESCRIBE --consumer-group fraud-cg`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 140,
+    title: "PCI DSS Compliance Requirements",
+    module: 10,
+    section: "Security & ACLs",
+    content: {
+      type: "text",
+      points: [
+        "Requirement 7: Restrict access to cardholder data by business need-to-know",
+        "Requirement 8: Identify and authenticate access to system components",
+        "Requirement 10: Track and monitor all access to network resources",
+        "Implementation: Service accounts, ACLs, audit logs, regular reviews",
+      ],
+      animation: "fade",
+    },
+  },
+
+  // Module 11: Kafka Transactions (Slides 141-155)
+  {
+    id: 141,
+    title: "The Double-Charge Catastrophe",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "text",
+      points: [
+        "INCIDENT: 10,000 customers double-charged during system failure!",
+        "Root Cause: Non-atomic writes to payments.processed and audit.events",
+        "Impact: $2.3M in duplicate charges, 6-hour recovery",
+        "Solution: Kafka transactions for exactly-once semantics",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 142,
+    title: "The Problem: Non-Atomic Operations",
+    module: 11,
+    section: "Transactions",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "TransactionProblemDemo",
+      props: {
+        showFailureScenario: true,
+        animateDataFlow: true,
+      },
+    },
+  },
+  {
+    id: 143,
+    title: "Kafka Transactions: All or Nothing",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "code",
+      language: "python",
+      code: `# Transactional Producer Configuration
+config = {
+    'transactional.id': 'payment-processor-v1',
+    'enable.idempotence': True,  # Required for transactions
+    'acks': 'all',               # Wait for all replicas
+    'retries': 2147483647,       # Max retries
+}
+
+# Transaction Pattern
+producer.init_transactions()
+
+try:
+    producer.begin_transaction()
+    
+    # All sends are atomic
+    producer.send('payments.processed', payment_data)
+    producer.send('audit.payment-events', audit_data)
+    
+    producer.commit_transaction()  # Both succeed
+except Exception as e:
+    producer.abort_transaction()   # Both rolled back
+    handle_failure(e)`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 144,
+    title: "Transaction Coordinator Protocol",
+    module: 11,
+    section: "Transactions",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "TransactionCoordinatorFlow",
+      props: {
+        showTwoPhaseCommit: true,
+        animateProtocol: true,
+      },
+    },
+  },
+  {
+    id: 145,
+    title: "Consumer Isolation Levels",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "code",
+      language: "python",
+      code: `# Read Committed - Only see completed transactions
+consumer_config = {
+    'isolation.level': 'read_committed',
+    'enable.auto.commit': False,
+    'auto.offset.reset': 'earliest'
+}
+
+# In financial systems, ALWAYS use read_committed!
+# - Prevents reading partial transaction data
+# - Ensures consistency across topics
+# - No duplicate payment processing
+
+# Read Uncommitted - See all messages (including aborted)
+# Only use for:
+# - Debugging transaction issues
+# - Non-critical data processing
+# - Performance-critical logging`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 146,
+    title: "When to Use Transactions",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "text",
+      points: [
+        "✅ Financial Operations: Payments, transfers, account updates",
+        "✅ Multi-Topic Coordination: Order processing with inventory",
+        "✅ Exactly-Once Stream Processing: Stateful operations",
+        "❌ High-Throughput Logging: 10-30% overhead not worth it",
+        "❌ Single Topic Writes: Idempotent producers sufficient",
+        "❌ Cross-System Transactions: Kafka can't span external DBs",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 147,
+    title: "Transaction Lab: Fix Double Charges",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "lab",
+      title: "Implementing Atomic Payment Processing",
+      steps: [
+        "Run broken processor - observe partial failures",
+        "Simulate recovery - watch duplicate payments occur",
+        "Implement transactional producer configuration",
+        "Add transaction boundaries around multi-topic writes",
+        "Configure read-committed consumer",
+        "Test failure scenarios - verify atomicity",
+        "Benchmark performance impact (~20% overhead)",
+      ],
+      estimatedTime: "30 minutes",
+    },
+  },
+  {
+    id: 148,
+    title: "Transactional ID Management",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "code",
+      language: "python",
+      code: `# Single Instance
+config = {
+    'transactional.id': 'payment-processor-v1'
+}
+
+# Multiple Instances (avoid conflicts)
+import socket
+config = {
+    'transactional.id': f'payment-processor-{socket.gethostname()}-{os.getpid()}'
+}
+
+# Kubernetes Deployment
+import os
+config = {
+    'transactional.id': f'payment-processor-{os.environ["HOSTNAME"]}'
+}
+
+# Important: Each producer instance needs unique transactional.id
+# Reusing IDs can cause transaction conflicts and failures`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 149,
+    title: "Performance Impact Analysis",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "text",
+      points: [
+        "Throughput Impact: ~20% reduction (50K → 40K msg/sec)",
+        "Latency Increase: +2-5ms per transaction commit",
+        "Memory Overhead: Transaction state tracking",
+        "Worth it when: Financial accuracy > performance",
+        "Not worth it when: Best-effort delivery acceptable",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 150,
+    title: "Production Transaction Patterns",
+    module: 11,
+    section: "Transactions",
+    content: {
+      type: "code",
+      language: "python",
+      code: `def process_payment_with_retry(payment, max_retries=3):
+    """Production-ready transactional processing"""
+    for attempt in range(max_retries):
+        try:
+            producer.begin_transaction()
+            
+            # Process payment
+            enriched = enrich_payment(payment)
+            producer.send('payments.processed', enriched)
+            
+            # Audit trail
+            audit = create_audit_record(enriched)
+            producer.send('audit.events', audit)
+            
+            # Update metrics
+            metrics = calculate_metrics(enriched)
+            producer.send('metrics.payments', metrics)
+            
+            producer.commit_transaction()
+            return True
+            
+        except TransactionAbortedException:
+            if attempt == max_retries - 1:
+                send_to_dlq(payment, "Transaction failed")
+                return False
+            time.sleep(2 ** attempt)  # Exponential backoff`,
+      animation: "slide",
+    },
+  },
+
+  // Module 12: Monitoring & Observability (Slides 151-165)
+  {
+    id: 151,
+    title: "Production Monitoring: See Everything",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "title",
+      mainTitle: "Comprehensive Kafka Monitoring",
+      subtitle: "Prometheus, Grafana, and Structured Logging",
+      backgroundAnimation: true,
+    },
+  },
+  {
+    id: 152,
+    title: "Monitoring Architecture",
+    module: 12,
+    section: "Monitoring",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "MonitoringArchitecture",
+      props: {
+        components: ["Producer", "Consumer", "Prometheus", "Grafana"],
+        showMetricsFlow: true,
+      },
+    },
+  },
+  {
+    id: 153,
+    title: "Key Metrics to Track",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "text",
+      points: [
+        "Producer: Request rate, response time, batch size, delivery failures",
+        "Consumer: Processing rate, lag, rebalances, end-to-end latency",
+        "Business: Payment volume, error rates, throughput by merchant",
+        "Infrastructure: CPU, memory, network I/O, disk usage",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 154,
+    title: "Prometheus Metrics Implementation",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "code",
+      language: "python",
+      code: `from prometheus_client import Counter, Histogram, Gauge
+
+# Define metrics
+payment_counter = Counter(
+    'payments_processed_total',
+    'Total payments processed',
+    ['status', 'merchant_id']
+)
+
+processing_time = Histogram(
+    'payment_processing_seconds',
+    'Payment processing time',
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0]
+)
+
+consumer_lag = Gauge(
+    'kafka_consumer_lag',
+    'Current consumer lag',
+    ['topic', 'partition']
+)
+
+# Use in code
+@processing_time.time()
+def process_payment(payment):
+    try:
+        result = validate_and_process(payment)
+        payment_counter.labels(
+            status='success',
+            merchant_id=payment['merchant_id']
+        ).inc()
+    except Exception as e:
+        payment_counter.labels(
+            status='failed',
+            merchant_id=payment['merchant_id']
+        ).inc()`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 155,
+    title: "Structured Logging with Correlation IDs",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "code",
+      language: "python",
+      code: `import structlog
+import uuid
+
+# Configure structured logging
+logger = structlog.get_logger()
+
+# API endpoint with correlation ID
+@app.post("/payments/batch")
+async def process_batch(request: Request, payments: PaymentBatch):
+    correlation_id = request.headers.get(
+        "X-Correlation-ID", 
+        str(uuid.uuid4())
+    )
+    
+    log = logger.bind(
+        correlation_id=correlation_id,
+        batch_size=len(payments.payments)
+    )
+    
+    log.info("Processing payment batch")
+    
+    for payment in payments.payments:
+        payment_log = log.bind(
+            payment_id=payment.payment_id,
+            amount=payment.amount
+        )
+        
+        try:
+            await process_payment(payment)
+            payment_log.info("Payment processed successfully")
+        except Exception as e:
+            payment_log.error("Payment failed", error=str(e))`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 156,
+    title: "Grafana Dashboard Design",
+    module: 12,
+    section: "Monitoring",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "GrafanaDashboardDemo",
+      props: {
+        dashboards: ["Payment Overview", "System Health", "Business Metrics"],
+        showRealTimeData: true,
+      },
+    },
+  },
+  {
+    id: 157,
+    title: "Alert Configuration",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "code",
+      language: "yaml",
+      code: `# Prometheus Alert Rules
+groups:
+  - name: payment_alerts
+    rules:
+      - alert: HighPaymentErrorRate
+        expr: |
+          rate(payments_processed_total{status="failed"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High payment failure rate: {{ $value | humanizePercentage }}"
+          
+      - alert: HighConsumerLag
+        expr: kafka_consumer_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer lag above threshold: {{ $value }}"
+          
+      - alert: ProcessingLatencyHigh
+        expr: |
+          histogram_quantile(0.95, payment_processing_seconds) > 2
+        for: 5m
+        labels:
+          severity: warning`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 158,
+    title: "Monitoring Lab: Full Stack Setup",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "lab",
+      title: "Building Production Monitoring",
+      steps: [
+        "Deploy monitoring stack with Docker Compose",
+        "Configure Prometheus scraping for producers/consumers",
+        "Import Grafana dashboards for payment processing",
+        "Generate load and observe real-time metrics",
+        "Trigger alerts by injecting failures",
+        "Trace requests using correlation IDs in logs",
+        "Create custom dashboard for business KPIs",
+      ],
+      estimatedTime: "35 minutes",
+    },
+  },
+  {
+    id: 159,
+    title: "Debugging with Correlation IDs",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "text",
+      points: [
+        "Generate UUID at edge service for each request",
+        "Pass correlation ID through all service calls",
+        "Include in all log entries and Kafka headers",
+        "Query logs across services: grep correlation_id logs/*",
+        "Trace complete request lifecycle end-to-end",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 160,
+    title: "Production Monitoring Best Practices",
+    module: 12,
+    section: "Monitoring",
+    content: {
+      type: "text",
+      points: [
+        "USE Method: Utilization, Saturation, Errors for resources",
+        "RED Method: Rate, Errors, Duration for services",
+        "Business metrics alongside technical metrics",
+        "Alert on symptoms, not causes (customer impact)",
+        "Keep dashboards focused - one purpose per dashboard",
+        "Regular alert tuning to reduce noise",
+      ],
+      animation: "fade",
+    },
+  },
+
+  // Module 13: Schema Evolution (Slides 161-175)
+  {
+    id: 161,
+    title: "The Friday Night Schema Disaster",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "text",
+      points: [
+        "11:47 PM: Developer deploys 'minor' schema change",
+        "11:48 PM: 47 downstream consumers start failing",
+        "Impact: All payment processing down for 6 hours",
+        "Revenue Loss: $2.3M during Black Friday sale",
+        "Root Cause: No schema compatibility validation",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 162,
+    title: "Schema Evolution Challenges",
+    module: 13,
+    section: "Schema Evolution",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "SchemaEvolutionDemo",
+      props: {
+        showBreakingChanges: true,
+        showCompatibleChanges: true,
+      },
+    },
+  },
+  {
+    id: 163,
+    title: "Schema Registry: Your Safety Net",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "text",
+      points: [
+        "Centralized schema storage and versioning",
+        "Compatibility validation before registration",
+        "Prevents breaking changes from reaching production",
+        "Supports multiple compatibility modes",
+        "Schema evolution without coordination meetings",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 164,
+    title: "Compatibility Modes Explained",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "code",
+      language: "yaml",
+      code: `# BACKWARD (Default - Consumer Protection)
+# New schema can read old data
+# Safe: Add optional fields, remove fields
+# Breaking: Add required fields, change types
+
+# FORWARD (Producer Flexibility)  
+# Old schema can read new data
+# Safe: Add fields with defaults, remove optional fields
+# Breaking: Remove required fields, change types
+
+# FULL (Maximum Safety)
+# Both backward AND forward compatible
+# Safe: Add optional fields with defaults
+# Breaking: Almost everything else
+
+# NONE (YOLO Mode - Never in Production!)
+# No validation - any change allowed
+# Use only in development/testing`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 165,
+    title: "Safe Schema Evolution Patterns",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "code",
+      language: "json",
+      code: `// Version 1 - Original Schema
+{
+  "type": "record",
+  "name": "Payment",
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": "string"}
+  ]
+}
+
+// Version 2 - Safe Addition (Backward Compatible)
+{
+  "type": "record", 
+  "name": "Payment",
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": "string"},
+    {"name": "merchant_category", "type": ["null", "string"], "default": null}
+  ]
+}
+
+// Version 3 - Breaking Change (REJECTED!)
+{
+  "fields": [
+    {"name": "payment_id", "type": "string"},
+    {"name": "amount", "type": "string"}  // Changed type! 💥
+  ]
+}`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 166,
+    title: "Schema Evolution Lab",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "lab",
+      title: "Preventing Schema Disasters",
+      steps: [
+        "Experience the disaster - deploy breaking change",
+        "Watch legacy consumers fail catastrophically",
+        "Register V1 schema in Schema Registry",
+        "Test safe evolution - add optional fields",
+        "Attempt breaking change - see rejection",
+        "Implement multi-version consumer support",
+        "Deploy new schema version safely",
+      ],
+      estimatedTime: "45 minutes",
+    },
+  },
+  {
+    id: 167,
+    title: "Multi-Version Consumer Pattern",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "code",
+      language: "python",
+      code: `class MultiVersionConsumer:
+    """Handle multiple schema versions gracefully"""
+    
+    def process_payment(self, message):
+        # Get schema version from message
+        schema_id = message.schema_id
+        
+        # Handle different versions
+        if schema_id == SCHEMA_V1_ID:
+            return self.process_v1_payment(message)
+        elif schema_id == SCHEMA_V2_ID:
+            return self.process_v2_payment(message)
+        else:
+            # Unknown version - log and skip
+            logger.warning(f"Unknown schema version: {schema_id}")
+            return None
+    
+    def process_v1_payment(self, message):
+        # Original processing logic
+        payment = message.value()
+        return {
+            'id': payment['payment_id'],
+            'amount': payment['amount'],
+            'category': 'UNKNOWN'  # Default for old messages
+        }
+    
+    def process_v2_payment(self, message):
+        # Enhanced processing with new fields
+        payment = message.value()
+        return {
+            'id': payment['payment_id'],
+            'amount': payment['amount'],
+            'category': payment.get('merchant_category', 'UNKNOWN')
+        }`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 168,
+    title: "Schema Design Best Practices",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "text",
+      points: [
+        "Always use optional fields for new additions",
+        "Provide defaults for backward compatibility",
+        "Never change field types or names",
+        "Use unions for nullable fields: ['null', 'string']",
+        "Version your subject names: payments-v1, payments-v2",
+        "Document breaking changes in migration guides",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 169,
+    title: "Schema Registry Operations",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "code",
+      language: "bash",
+      code: `# Register new schema
+curl -X POST http://schema-registry:8081/subjects/payments-value/versions \\
+  -H "Content-Type: application/vnd.schemaregistry.v1+json" \\
+  -d '{"schema": "{...}"}'
+
+# Check compatibility before registering
+curl -X POST http://schema-registry:8081/compatibility/subjects/payments-value/versions/latest \\
+  -H "Content-Type: application/vnd.schemaregistry.v1+json" \\
+  -d '{"schema": "{...}"}'
+
+# List all versions
+curl http://schema-registry:8081/subjects/payments-value/versions
+
+# Get specific version
+curl http://schema-registry:8081/subjects/payments-value/versions/2
+
+# Set compatibility mode
+curl -X PUT http://schema-registry:8081/config/payments-value \\
+  -H "Content-Type: application/vnd.schemaregistry.v1+json" \\
+  -d '{"compatibility": "BACKWARD"}'`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 170,
+    title: "Production Schema Evolution Workflow",
+    module: 13,
+    section: "Schema Evolution",
+    content: {
+      type: "text",
+      points: [
+        "1. Design schema change with compatibility in mind",
+        "2. Test compatibility locally with schema registry",
+        "3. Deploy new consumers that handle both versions",
+        "4. Register new schema version in production",
+        "5. Deploy new producers using new schema",
+        "6. Monitor adoption and deprecate old versions",
+      ],
+      animation: "fade",
+    },
+  },
+
+  // Module 14: Kafka Connect (Slides 171-180)
+  {
+    id: 171,
+    title: "Kafka Connect: Integration Made Easy",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "title",
+      mainTitle: "Kafka Connect",
+      subtitle: "Streaming Data Integration at Scale",
+      backgroundAnimation: true,
+    },
+  },
+  {
+    id: 172,
+    title: "Why Kafka Connect?",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "text",
+      points: [
+        "No code required for common integrations",
+        "Automatic scaling and fault tolerance",
+        "Exactly-once delivery guarantees",
+        "Schema evolution support built-in",
+        "100+ pre-built connectors available",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 173,
+    title: "Connect Architecture",
+    module: 14,
+    section: "Kafka Connect",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "KafkaConnectArchitecture",
+      props: {
+        showSourceConnector: true,
+        showSinkConnector: true,
+        animateDataFlow: true,
+      },
+    },
+  },
+  {
+    id: 174,
+    title: "JDBC Source Connector",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "code",
+      language: "json",
+      code: `{
+  "name": "postgres-payment-source",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "connection.url": "jdbc:postgresql://postgres:5432/payments",
+    "connection.user": "payments_user",
+    "connection.password": "\${file:/secrets/postgres-password.txt}",
+    "topic.prefix": "postgres-",
+    "mode": "incrementing",
+    "incrementing.column.name": "id",
+    "table.whitelist": "payments,merchants,customers",
+    "poll.interval.ms": "1000",
+    "transforms": "createKey,extractInt",
+    "transforms.createKey.type": "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.createKey.fields": "payment_id",
+    "transforms.extractInt.type": "org.apache.kafka.connect.transforms.ExtractField\$Key",
+    "transforms.extractInt.field": "payment_id"
+  }
+}`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 175,
+    title: "HTTP Sink Connector",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "code",
+      language: "json",
+      code: `{
+  "name": "http-payment-webhook",
+  "config": {
+    "connector.class": "io.confluent.connect.http.HttpSinkConnector",
+    "topics": "payment-notifications",
+    "http.api.url": "https://api.merchant.com/webhooks/payments",
+    "request.method": "POST",
+    "headers": "Content-Type:application/json,Authorization:Bearer \${secret}",
+    "batch.max.size": "10",
+    "batch.json.as.array": "true",
+    "reporter.bootstrap.servers": "kafka:9092",
+    "reporter.error.topic.name": "payment-webhook-errors",
+    "reporter.error.topic.replication.factor": "3",
+    "retry.backoff.ms": "1000",
+    "max.retries": "3",
+    "behavior.on.error": "log"
+  }
+}`,
+      animation: "slide",
+    },
+  },
+  {
+    id: 176,
+    title: "Connect Lab: Database Integration",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "lab",
+      title: "Streaming Database Changes to Kafka",
+      steps: [
+        "Deploy PostgreSQL with payment tables",
+        "Configure JDBC source connector",
+        "Insert payment records in database",
+        "Verify streaming to Kafka topics",
+        "Configure HTTP sink for webhooks",
+        "Test end-to-end: DB → Kafka → HTTP",
+        "Handle failures and monitor connector status",
+      ],
+      estimatedTime: "30 minutes",
+    },
+  },
+  {
+    id: 177,
+    title: "Connector Monitoring",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "code",
+      language: "bash",
+      code: `# Check connector status
+curl http://connect:8083/connectors/postgres-payment-source/status
+
+# Response
+{
+  "name": "postgres-payment-source",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "connect-1:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "connect-1:8083"
+    }
+  ]
+}
+
+# Pause connector
+curl -X PUT http://connect:8083/connectors/postgres-payment-source/pause
+
+# Resume connector  
+curl -X PUT http://connect:8083/connectors/postgres-payment-source/resume
+
+# Delete connector
+curl -X DELETE http://connect:8083/connectors/postgres-payment-source`,
+      animation: "fade",
+    },
+  },
+  {
+    id: 178,
+    title: "Production Connect Best Practices",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "text",
+      points: [
+        "Use distributed mode for production (never standalone)",
+        "Configure proper error handling and dead letter queues",
+        "Monitor connector lag and task failures",
+        "Use SMTs (Single Message Transforms) for light processing",
+        "Externalize secrets - never hardcode passwords",
+        "Test connector upgrades in staging first",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 179,
+    title: "Common Connect Pitfalls",
+    module: 14,
+    section: "Kafka Connect",
+    content: {
+      type: "text",
+      points: [
+        "Not setting proper key.converter and value.converter",
+        "Forgetting to increase tasks.max for parallelism",
+        "Missing error tolerance configuration",
+        "Not monitoring source database load",
+        "Inadequate retry and backoff settings",
+        "Schema changes breaking CDC connectors",
+      ],
+      animation: "fade",
+    },
+  },
+
+  // Module 15: Day 3 Wrap-up (Slides 180-185)
+  {
+    id: 180,
+    title: "Day 3 Success Metrics",
+    module: 15,
+    section: "Wrap-up",
+    content: {
+      type: "text",
+      points: [
+        "✅ Secured payment pipeline with ACLs and PCI compliance",
+        "✅ Implemented exactly-once semantics with transactions",
+        "✅ Built comprehensive monitoring with Prometheus/Grafana",
+        "✅ Integrated external systems using Kafka Connect",
+        "✅ Mastered schema evolution without breaking consumers",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 181,
+    title: "Production Readiness Checklist",
+    module: 15,
+    section: "Wrap-up",
+    content: {
+      type: "text",
+      points: [
+        "Security: ACLs, encryption, authentication configured",
+        "Reliability: Transactions for critical workflows",
+        "Observability: Metrics, logs, traces, alerts in place",
+        "Integration: Connect pipelines for external systems",
+        "Evolution: Schema registry preventing breaking changes",
+        "Operations: Runbooks, disaster recovery plans ready",
+      ],
+      animation: "fade",
+    },
+  },
+  {
+    id: 182,
+    title: "What We've Built Together",
+    module: 15,
+    section: "Wrap-up",
+    interactive: true,
+    content: {
+      type: "interactive",
+      component: "FinalArchitectureOverview",
+      props: {
+        showAllComponents: true,
+        animateConnections: true,
+      },
+    },
+  },
+  {
+    id: 183,
+    title: "Next Steps & Resources",
+    module: 15,
+    section: "Wrap-up",
+    content: {
+      type: "text",
+      points: [
+        "Explore Kafka Streams for stateful processing",
+        "Implement KSQL for SQL-based stream processing",
+        "Study advanced patterns: CQRS, Event Sourcing",
+        "Consider Confluent Cloud for managed operations",
+        "Join Kafka Summit for latest developments",
+        "Practice with real production scenarios",
+      ],
+      animation: "slide",
+    },
+  },
+  {
+    id: 184,
+    title: "Course Complete! 🎉",
+    module: 15,
+    section: "Wrap-up",
+    content: {
+      type: "title",
+      mainTitle: "Congratulations! 🎉",
+      subtitle: "You're Now a Kafka Production Expert",
+      instructor: {
+        name: "Thank you for joining this journey!",
+        company: "Ready to build amazing event streaming systems",
+        role: "The world of real-time data awaits you",
+      },
+      backgroundAnimation: true,
+    },
+  },
+  {
+    id: 185,
+    title: "Final Thoughts",
+    module: 15,
+    section: "Wrap-up",
+    content: {
+      type: "text",
+      points: [
+        "Remember: Start simple, evolve gradually",
+        "Monitor everything, alert on what matters",
+        "Security first - protect customer data always",
+        "Document your decisions for future you",
+        "Share knowledge with your team",
+        "Keep learning - Kafka evolves rapidly!",
+      ],
+      animation: "fade",
+    },
+  },
 ];
 
 // Helper function to get slides by module

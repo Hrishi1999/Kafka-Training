@@ -1,4 +1,4 @@
-# Module 2: Security with ACLs - Payment Pipeline Protection
+# Module 1: Security with ACLs - Payment Pipeline Protection
 
 ## 🎯 Learning Objectives
 

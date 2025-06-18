@@ -43,6 +43,7 @@ export interface CodeSlideContent {
   highlightLines?: number[];
   explanation?: string;
   runnable?: boolean;
+  animation?: 'fade' | 'slide' | 'scale';
 }
 
 export interface InteractiveSlideContent {
@@ -53,11 +54,13 @@ export interface InteractiveSlideContent {
 
 export interface LabSlideContent {
   type: 'lab';
-  labNumber: string;
+  labNumber?: string;
   title: string;
-  tasks: string[];
-  expectedOutcome: string[];
+  tasks?: string[];
+  steps?: string[];
+  expectedOutcome?: string[];
   hints?: string[];
+  estimatedTime?: string;
 }
 
 export interface ConfigSlideContent {
